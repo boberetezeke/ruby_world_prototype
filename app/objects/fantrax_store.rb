@@ -1,4 +1,4 @@
-class Obj::FantraxStore < Store
+class Obj::FantraxStore < Obj::Store
   def initialize(db, directory)
     super()
     @db = db

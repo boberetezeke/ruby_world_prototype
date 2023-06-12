@@ -6,6 +6,6 @@ path = File.dirname(__FILE__)
 load "#{path}/app/objects.rb"
 load "#{path}/app/commands.rb"
 
-@db = Database.read
+@db = Obj::Database.read
 
 
