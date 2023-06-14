@@ -1,4 +1,23 @@
 class Obj::BaseballPlayer < Obj
+
+  def self.default_display
+    {
+      sym_sets: {
+        default: [:id, :name, :fantasy_ppg, :fantasy_pts, [:fantasy_team, :name]]
+      },
+      fields: {
+        id: { width: 35, type: :string, title: 'ID' },
+        name: { width: 20, type: :string, title: 'name' },
+        fantasy_ppg: { width: 10, type: :float, format: '%.2f', title: 'fpts/g' },
+        fantasy_pts: { width: 10, type: :float, format: '%.2f', title: 'fpts' }
+      }
+    }
+  end
+
+  def self.default_titles
+
+  end
+
   def initialize(remote_id, name, baseball_team, positions, fantasy_team, age, fantasy_pts, fantasy_ppg, roster_pct, roster_pct_chg)
     super(:baseball_player, {
       remote_id: remote_id,
