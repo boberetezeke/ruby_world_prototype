@@ -1,3 +1,5 @@
+require 'csv'
+
 class Obj::FantraxStore < Obj::Store
   def initialize(db, directory)
     super()
@@ -10,7 +12,7 @@ class Obj::FantraxStore < Obj::Store
       next unless fn =~ /7-days/
 
       lines = CSV.open(fn, headers: true).readlines
-      baseball_players = lines[0..5].map do |row|
+      baseball_players = lines.map do |row|
         remote_id = row['ID']
         name = row['Player']
         team_name = row['Team']
@@ -24,10 +26,12 @@ class Obj::FantraxStore < Obj::Store
         Obj::BaseballPlayer.from_csv(@db, remote_id, name, team_name, positions, status, age, fantasy_pts, fantasy_ppg, roster_pct, roster_pct_chg)
       end
 
-      baseball_players.each do |baseball_player|
-        puts "looking for baseball player: #{baseball_player.remote_id}"
+      total = baseball_players.size
+      baseball_players.each_with_index do |baseball_player, index|
+        puts("%.2f" % [(index / total.to_f) * 100]) if index % 100 == 0
+        # puts "looking for baseball player: #{baseball_player.remote_id}"
         db_baseball_player = @db.find_by(:baseball_player, { remote_id: baseball_player.remote_id })
-        puts "db_baseball_player: #{db_baseball_player}"
+        # puts "db_baseball_player: #{db_baseball_player}"
         if !db_baseball_player.nil?
           baseball_player.update(db_baseball_player)
         else

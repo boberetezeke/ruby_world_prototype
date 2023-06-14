@@ -8,4 +8,7 @@ load "#{path}/app/commands.rb"
 
 @db = Obj::Database.read
 
+# Obj::FantraxStore.new(@db, '/home/stevetuckner/Projects/RubyWorld/ruby_world_prototype').sync
+
+# save
 
