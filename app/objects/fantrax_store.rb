@@ -27,7 +27,9 @@ class Obj::FantraxStore < Obj::Store
       end
 
       total = baseball_players.size
-      baseball_players.each_with_index do |baseball_player, index|
+      baseball_players
+        .select{|bp| bp.fantasy_pts > 0.0}
+        .each_with_index do |baseball_player, index|
         puts("%.2f" % [(index / total.to_f) * 100]) if index % 100 == 0
         # puts "looking for baseball player: #{baseball_player.remote_id}"
         db_baseball_player = @db.find_by(:baseball_player, { remote_id: baseball_player.remote_id })
@@ -36,6 +38,13 @@ class Obj::FantraxStore < Obj::Store
           baseball_player.update(db_baseball_player)
         else
           @db.add_obj(baseball_player)
+        end
+        fantasy_team.players.add(baseball_player) if baseball_player.fantasy_team
+        baseball_team.players.add(baseball_player) if baseball_player.baseball_team
+        fantrax_stat = baseball_player.fantrax_stats.first
+        baseball_player.fantrax_stats.push(fantrax_stat) unless baseball_player.fantrax_stats.find do |fs|
+          fs.recorded_date == fantrax_stat.recorded_date &&
+            fs.days_back == fantrax_stat.days_back
         end
       end
     end

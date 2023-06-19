@@ -1,3 +1,5 @@
+require 'date'
+
 class Obj
   attr_reader :id, :type_sym, :attrs
   def initialize(type_sym, attrs)
@@ -9,6 +11,12 @@ class Obj
 
   def update(obj)
     @attrs = obj.attrs
+  end
+
+  def remove_keys(*keys)
+    keys.flatten.each do |key|
+      @attrs.delete(key)
+    end
   end
 
   def method_missing(sym, *args)

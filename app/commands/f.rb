@@ -7,9 +7,10 @@ def camelize(string, uppercase_first_letter = true)
   string.gsub(/(?:_|(\/))([a-z\d]*)/) { "#{$1}#{$2.capitalize}" }.gsub("/", "::")
 end
 
-PAGE_SIZE = 10
 
 def f(objs)
+  page_size = 10
+
   if objs.empty?
     puts "no objects to display"
     return
@@ -53,7 +54,7 @@ def f(objs)
     total = objs.size
     start_index = 0
     loop do
-      end_index = start_index + PAGE_SIZE - 1
+      end_index = start_index + page_size - 1
       end_index = total - 1 if end_index > total
       objs[start_index..end_index].each do |obj|
         puts(format % data_lambda.call(obj) )
@@ -63,11 +64,11 @@ def f(objs)
       s = gets
       break if s =~ /q/i
       if s =~ /p/i
-        start_index -= PAGE_SIZE
+        start_index -= page_size
         start_index = 0 if start_index < 0
       else
-        if start_index + PAGE_SIZE < total
-          start_index += PAGE_SIZE
+        if start_index + page_size < total
+          start_index += page_size
         end
       end
     end

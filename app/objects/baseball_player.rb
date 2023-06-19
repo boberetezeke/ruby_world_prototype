@@ -3,22 +3,21 @@ class Obj::BaseballPlayer < Obj
   def self.default_display
     {
       sym_sets: {
-        default: [:id, :name, :fantasy_ppg, :fantasy_pts, [:fantasy_team, :name]]
+        default: [:id,
+                  :name,
+                  [:fantrax_stat, :fantasy_ppg],
+                  [:fantrax_stat, :fantasy_pts],
+                  [:fantasy_team, :name]
+        ]
       },
       fields: {
         id: { width: 35, type: :string, title: 'ID' },
-        name: { width: 20, type: :string, title: 'name' },
-        fantasy_ppg: { width: 10, type: :float, format: '%.2f', title: 'fpts/g' },
-        fantasy_pts: { width: 10, type: :float, format: '%.2f', title: 'fpts' }
+        name: { width: 20, type: :string, title: 'name' }
       }
     }
   end
 
-  def self.default_titles
-
-  end
-
-  def initialize(remote_id, name, baseball_team, positions, fantasy_team, age, fantasy_pts, fantasy_ppg, roster_pct, roster_pct_chg)
+  def initialize(remote_id, name, baseball_team, positions, fantasy_team, age, fantrax_stats, rotowire_stats)
     super(:baseball_player, {
       remote_id: remote_id,
       name: name,
@@ -26,10 +25,8 @@ class Obj::BaseballPlayer < Obj
       positions: positions,
       fantasy_team: fantasy_team,
       age: age,
-      fantasy_pts: fantasy_pts,
-      fantasy_ppg: fantasy_ppg,
-      roster_pct: roster_pct,
-      roster_pct_chg: roster_pct_chg
+      fantrax_stats: fantrax_stats,
+      rotowire_stats: rotowire_stats
     })
   end
 
@@ -62,9 +59,8 @@ class Obj::BaseballPlayer < Obj
       roster_pct_chg = 0.0
     end
     roster_pct_chg = roster_pct_chg / 100.0
-    player = new(remote_id, name, baseball_team, positions, fantasy_team, age, fantasy_pts, fantasy_ppg, roster_pct, roster_pct_chg)
-    fantasy_team.players.add(player) if fantasy_team
-    baseball_team.players.add(player) if baseball_team
+    fantrax_stat = FantraxStat.new(date, days_back, fantasy_ppg, fantasy_pts, roster_pct, roster_pct_chg)
+    player = new(remote_id, name, baseball_team, positions, fantasy_team, age, [fantrax_stat], [])
     player
   end
 end

@@ -13,6 +13,7 @@ load "#{path}/objects/call.rb"
 load "#{path}/objects/contact.rb"
 load "#{path}/objects/email.rb"
 load "#{path}/objects/fantasy_team.rb"
+load "#{path}/objects/fantrax_stat.rb"
 load "#{path}/objects/note.rb"
 load "#{path}/objects/tag.rb"
 
