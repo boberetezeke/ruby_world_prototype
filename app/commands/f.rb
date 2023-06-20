@@ -73,7 +73,10 @@ module F
   end
 end
 
-def f(objs, column_defs: {})
+# f players, display: {name: nil, fantasy_pts: ->(bp){ fp.fantasy_stats.first }, fantasy_ppg: ->(bp){ fp.fantasy_stats.first.fantasy_ppg }}
+# f players, display: [:id, :name, [:fantasy_stats, :fantasy_pts]]]
+#
+def f(objs, ids: nil, fields: {})
   page_size = 10
 
   if objs.empty?
@@ -84,12 +87,12 @@ def f(objs, column_defs: {})
   obj_types = objs.map{|o| o.class.to_s}.uniq
   if obj_types.size == 1
     display = objs.first.class.default_display
-    ids = display[:sym_sets][:default]
+    ids_ = ids || display[:sym_sets][:default]
 
-    fields = F.fields(ids, display)
-    data_lambda = F.data_lambda(fields)
-    format = F.format(fields)
-    titles = F.titles(fields)
+    f = F.fields(ids_, display)
+    data_lambda = F.data_lambda(f)
+    format = F.format(f)
+    titles = F.titles(f)
 
     puts(format % titles)
     F.paginated_display(objs, format, data_lambda, page_size)
