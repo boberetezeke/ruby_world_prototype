@@ -7,20 +7,9 @@ def camelize(string, uppercase_first_letter = true)
   string.gsub(/(?:_|(\/))([a-z\d]*)/) { "#{$1}#{$2.capitalize}" }.gsub("/", "::")
 end
 
-
-def f(objs)
-  page_size = 10
-
-  if objs.empty?
-    puts "no objects to display"
-    return
-  end
-
-  obj_types = objs.map{|o| o.class.to_s}.uniq
-  if obj_types.size == 1
-    display = objs.first.class.default_display
-    ids = display[:sym_sets][:default]
-    fields = ids.map do |full_id|
+module F
+  def self.fields(ids, display)
+    ids.map do |full_id|
       d = display
       last_id = full_id
       if full_id.is_a?(Array)
@@ -29,10 +18,10 @@ def f(objs)
       end
       [last_id, d[:fields][last_id], full_id]
     end
+  end
 
-    format = fields.map{ |id, f, _| "%-#{f[:width]}s" }.join(' ')
-    titles = fields.map{ |id, f, _| f[:title] }
-    data_lambda = ->(obj){
+  def self.data_lambda(fields)
+    ->(obj){
       fields.map do |id, f, full_id|
         if full_id.is_a?(Array)
           val = obj
@@ -49,8 +38,17 @@ def f(objs)
         end
       end
     }
+  end
 
-    puts(format % titles)
+  def self.format(fields)
+    fields.map{ |id, f, _| "%-#{f[:width]}s" }.join(' ')
+  end
+
+  def self.titles(fields)
+    fields.map{ |id, f, _| f[:title] }
+  end
+
+  def self.paginated_display(objs, format, data_lambda, page_size)
     total = objs.size
     start_index = 0
     loop do
@@ -72,6 +70,29 @@ def f(objs)
         end
       end
     end
+  end
+end
+
+def f(objs, column_defs: {})
+  page_size = 10
+
+  if objs.empty?
+    puts "no objects to display"
+    return
+  end
+
+  obj_types = objs.map{|o| o.class.to_s}.uniq
+  if obj_types.size == 1
+    display = objs.first.class.default_display
+    ids = display[:sym_sets][:default]
+
+    fields = F.fields(ids, display)
+    data_lambda = F.data_lambda(fields)
+    format = F.format(fields)
+    titles = F.titles(fields)
+
+    puts(format % titles)
+    F.paginated_display(objs, format, data_lambda, page_size)
   else
     puts "all objects must be of the same type: #{obj_types}"
   end

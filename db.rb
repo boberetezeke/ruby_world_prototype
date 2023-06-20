@@ -11,7 +11,7 @@ load "#{path}/app/commands.rb"
 # f players
 
 # Obj::FantraxStore.new(@db, '/home/stevetuckner/Projects/RubyWorld/ruby_world_prototype').sync
-Obj::FantraxStore.new(@db, '/Users/stevetuckner/Documents/Fantrax').sync
+## Obj::FantraxStore.new(@db, '/Users/stevetuckner/Documents/Fantrax').sync
 
-save
+# save
 

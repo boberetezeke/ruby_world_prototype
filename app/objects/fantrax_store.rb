@@ -11,6 +11,12 @@ class Obj::FantraxStore < Obj::Store
     Dir["#{@directory}/*"].each do|fn|
       next unless fn =~ /7-days/
 
+      m = /Fantrax-(\d+)-(\d+)-(\d+)--(\d+)-days/.match(fn)
+      next unless m
+
+      date = Date.new(m[1].to_i, m[2].to_i, m[3].to_i)
+      days_back = m[4].to_i
+
       lines = CSV.open(fn, headers: true).readlines
       baseball_players = lines.map do |row|
         remote_id = row['ID']
@@ -23,12 +29,12 @@ class Obj::FantraxStore < Obj::Store
         fantasy_ppg = row['FP/G']
         roster_pct = row['Ros %']
         roster_pct_chg = row['+/-']
-        Obj::BaseballPlayer.from_csv(@db, remote_id, name, team_name, positions, status, age, fantasy_pts, fantasy_ppg, roster_pct, roster_pct_chg)
+        Obj::BaseballPlayer.from_csv(@db, date, days_back, remote_id, name, team_name, positions, status, age, fantasy_pts, fantasy_ppg, roster_pct, roster_pct_chg)
       end
 
       total = baseball_players.size
       baseball_players
-        .select{|bp| bp.fantasy_pts > 0.0}
+        .select{|bp| bp.fantrax_stats.first.fantasy_pts > 0.0 }
         .each_with_index do |baseball_player, index|
         puts("%.2f" % [(index / total.to_f) * 100]) if index % 100 == 0
         # puts "looking for baseball player: #{baseball_player.remote_id}"
@@ -39,8 +45,8 @@ class Obj::FantraxStore < Obj::Store
         else
           @db.add_obj(baseball_player)
         end
-        fantasy_team.players.add(baseball_player) if baseball_player.fantasy_team
-        baseball_team.players.add(baseball_player) if baseball_player.baseball_team
+        baseball_player.fantasy_team.players.add(baseball_player) if baseball_player.fantasy_team
+        baseball_player.baseball_team.players.add(baseball_player) if baseball_player.baseball_team
         fantrax_stat = baseball_player.fantrax_stats.first
         baseball_player.fantrax_stats.push(fantrax_stat) unless baseball_player.fantrax_stats.find do |fs|
           fs.recorded_date == fantrax_stat.recorded_date &&

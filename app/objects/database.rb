@@ -8,12 +8,13 @@ class Obj::Database
 
     # constants
     @original_version = 1
+    @current_version = 2
     @migrations_applied_version = 2
   end
 
   def serialize
     {
-      version: 2,
+      version: @current_version,
       objs: @objs,
       tags: @tags,
       migrations_applied: @migrations_applied

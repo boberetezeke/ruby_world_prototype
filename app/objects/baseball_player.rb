@@ -30,7 +30,11 @@ class Obj::BaseballPlayer < Obj
     })
   end
 
-  def self.from_csv(db, remote_id, name, team_name, positions, status, age, fantasy_pts, fantasy_ppg, roster_pct, roster_pct_chg)
+  def fantrax_stat
+    fantrax_stats.first
+  end
+
+  def self.from_csv(db, date, days_back, remote_id, name, team_name, positions, status, age, fantasy_pts, fantasy_ppg, roster_pct, roster_pct_chg)
     remote_id = remote_id
     name = name
     if team_name != "(N/A)"
