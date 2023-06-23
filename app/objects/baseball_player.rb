@@ -5,9 +5,9 @@ class Obj::BaseballPlayer < Obj
       sym_sets: {
         default: [:id,
                   :name,
-                  [:fantrax_stat, :fantasy_ppg],
-                  [:fantrax_stat, :fantasy_pts],
-                  [:fantasy_team, :name]
+                  { fppg: [:fantrax_stat, :fantasy_ppg] },
+                  { fpts: [:fantrax_stat, :fantasy_pts] },
+                  { fteam: [:fantasy_team, :name] }
         ]
       },
       fields: {

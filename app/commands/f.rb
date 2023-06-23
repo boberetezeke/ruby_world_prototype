@@ -8,22 +8,39 @@ def camelize(string, uppercase_first_letter = true)
 end
 
 module F
-  def self.fields(ids, display)
-    ids.map do |full_id|
-      d = display
-      last_id = full_id
-      if full_id.is_a?(Array)
-        d = eval("Obj::" + camelize(full_id[-2].to_s)).default_display
-        last_id = full_id[-1]
+  def self.fields(cols, display)
+    cols.map do |col_info|
+      if col_info.is_a?(Hash)
+        full_id = col_info.values.first
+      else
+        full_id = col_info
       end
-      [last_id, d[:fields][last_id], full_id]
+
+      if full_id.is_a?(Proc)
+        [nil, { title: '', type: :string, width: 20}, full_id]
+      else
+        d = display
+        last_id = full_id
+        if full_id.is_a?(Array)
+          if full_id.size > 1
+            d = eval("Obj::" + camelize(full_id[-2].to_s)).default_display
+            last_id = full_id[-1]
+          else
+            full_id = full_id[0]
+            last_id = full_id
+          end
+        end
+        [last_id, d[:fields][last_id], full_id]
+      end
     end
   end
 
   def self.data_lambda(fields)
     ->(obj){
       fields.map do |id, f, full_id|
-        if full_id.is_a?(Array)
+        if full_id.is_a?(Proc)
+          val = full_id.call(obj)
+        elsif full_id.is_a?(Array)
           val = obj
           full_id.each{|sym| val = val&.send(sym) }
         else
@@ -76,8 +93,13 @@ end
 # f players, display: {name: nil, fantasy_pts: ->(bp){ fp.fantasy_stats.first }, fantasy_ppg: ->(bp){ fp.fantasy_stats.first.fantasy_ppg }}
 # f players, display: [:id, :name, [:fantasy_stats, :fantasy_pts]]]
 #
-def f(objs, ids: nil, fields: {})
+def f(objs, *args, **hargs)
   page_size = 10
+
+  # puts "args: #{args.inspect}"
+  # puts "hargs: #{hargs.inspect}"
+
+  cols = args + hargs.to_a.map{|k,v| {k => v}}
 
   if objs.empty?
     puts "no objects to display"
@@ -87,9 +109,11 @@ def f(objs, ids: nil, fields: {})
   obj_types = objs.map{|o| o.class.to_s}.uniq
   if obj_types.size == 1
     display = objs.first.class.default_display
-    ids_ = ids || display[:sym_sets][:default]
+    if cols.empty?
+      cols = display[:sym_sets][:default]
+    end
 
-    f = F.fields(ids_, display)
+    f = F.fields(cols, display)
     data_lambda = F.data_lambda(f)
     format = F.format(f)
     titles = F.titles(f)
