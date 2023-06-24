@@ -1,4 +1,5 @@
 require 'date'
+require 'securerandom'
 
 class Obj
   attr_reader :id, :type_sym, :attrs

@@ -12,6 +12,10 @@ class Obj::Database
     @migrations_applied_version = 2
   end
 
+  def self.db_path
+    ENV['RW_DATABASE_PATH'] || 'db.yml'
+  end
+
   def serialize
     {
       version: @current_version,
@@ -28,7 +32,7 @@ class Obj::Database
   end
 
   def write
-    File.open("db.yml", "w") {|f| f.write(serialize.to_yaml) }
+    File.open(self.class.db_path, "w") {|f| f.write(serialize.to_yaml) }
   end
 
   def add_migrations_applied(migrations)
@@ -59,9 +63,9 @@ class Obj::Database
 
   def self.read
     database = self.new
-    return database unless File.exist?("db.yml")
+    return database unless File.exist?(db_path)
 
-    yml = File.open("db.yml") { |f| YAML.load(f) }
+    yml = File.open(db_path) { |f| YAML.load(f) }
     database.deserialize(yml)
     database = migrate(Migrations.migrations, database)
     database

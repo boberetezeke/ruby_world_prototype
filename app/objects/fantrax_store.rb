@@ -9,8 +9,6 @@ class Obj::FantraxStore < Obj::Store
 
   def sync
     Dir["#{@directory}/*"].each do|fn|
-      next unless fn =~ /7-days/
-
       m = /Fantrax-(\d+)-(\d+)-(\d+)--(\d+)-days/.match(fn)
       next unless m
 
