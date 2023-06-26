@@ -1,4 +1,7 @@
 class Obj::BaseballPlayer < Obj
+  belongs_to :baseball_team, :baseball_team_id
+  belongs_to :fantasy_team, :fantasy_team_id
+  has_many :fantrax_stats, :fantrax_stat, :baseball_player_id
 
   def self.default_display
     {
@@ -17,16 +20,12 @@ class Obj::BaseballPlayer < Obj
     }
   end
 
-  def initialize(remote_id, name, baseball_team, positions, fantasy_team, age, fantrax_stats, rotowire_stats)
+  def initialize(remote_id, name, positions, age)
     super(:baseball_player, {
       remote_id: remote_id,
       name: name,
-      baseball_team: baseball_team,
       positions: positions,
-      fantasy_team: fantasy_team,
       age: age,
-      fantrax_stats: fantrax_stats,
-      rotowire_stats: rotowire_stats
     })
   end
 
@@ -38,13 +37,15 @@ class Obj::BaseballPlayer < Obj
     remote_id = remote_id
     name = name
     if team_name != "(N/A)"
-      baseball_team = db.find_by(:baseball_team, name: team_name) || db.add_obj(Obj::BaseballTeam.new(team_name))
+      baseball_team = Obj::BaseballTeam.new(team_name)
+      # baseball_team = db.find_by(:baseball_team, name: team_name) || db.add_obj(Obj::BaseballTeam.new(team_name))
     else
       baseball_team = nil
     end
     positions = positions.split(/,/)
     if status != "FA"
-      fantasy_team = db.find_by(:fantasy_team, name: status) || db.add_obj(Obj::FantasyTeam.new(status))
+      # fantasy_team = db.find_by(:fantasy_team, name: status) || db.add_obj(Obj::FantasyTeam.new(status))
+      fantasy_team = Obj::FantasyTeam.new(status)
     else
       fantasy_team = nil
     end

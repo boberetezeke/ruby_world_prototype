@@ -13,7 +13,7 @@ class Obj::Database
   end
 
   def self.db_path
-    ENV['RW_DATABASE_PATH'] || 'db.yml'
+    File.join(ENV['RW_DATABASE_PATH'], 'db.yml') || 'db.yml'
   end
 
   def serialize

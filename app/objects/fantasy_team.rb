@@ -1,4 +1,6 @@
 class Obj::FantasyTeam < Obj
+  has_many :baseball_players, :basebase_player, :fantasy_team_id
+
   def self.default_display
     {
       sym_sets: {
@@ -10,8 +12,9 @@ class Obj::FantasyTeam < Obj
       }
     }
   end
+
   def initialize(name)
-    super(:fantasy_team, {name: name, players: Obj::Collection.new(:baseball_player)})
+    super(:fantasy_team, {name: name})
   end
 end
 
