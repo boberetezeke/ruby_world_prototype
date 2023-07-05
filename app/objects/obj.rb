@@ -9,6 +9,8 @@ class Obj
     @attrs = attrs
     @rel_attrs = {}
     @id =  SecureRandom.hex
+
+    self.class.objects[@id] = self
   end
 
   def self.belongs_to(relationship, foreign_key)
@@ -31,6 +33,10 @@ class Obj
 
   def self.relationships
     @relationships || {}
+  end
+
+  def self.objects
+    @objects || {}
   end
 
   def relationships
@@ -59,7 +65,7 @@ class Obj
         if rel[:type] == :belongs_to
           return @rel_attrs[sym] = rel[:foreign_key]
         elsif rel[:type] == :has_many
-          return Database.current.objs[rel[:name]].select{|obj| obj.send(rel[:foreign_key] == self.id)}
+          return self.class.objects[rel[:name]].select{|obj| obj.send(rel[:foreign_key] == self.id)}
         end
       end
     elsif args.size == 0
@@ -68,9 +74,9 @@ class Obj
       elsif relationships.include?(sym)
         rel = relationships[sym]
         if rel[:type] == :belongs_to
-          return Database.current.objs[rel[:name]][@rel_attrs[sym]]
+          return self.class.objects[rel[:name]][@rel_attrs[sym]]
         elsif rel[:type] == :has_many
-          return Database.current.objs[rel[:name]].select{|obj| obj.send(rel[:foreign_key] == self.id)}
+          return self.class.objects[rel[:name]].select{|obj| obj.send(rel[:foreign_key] == self.id)}
         end
       end
     end
