@@ -40,6 +40,13 @@ describe Obj do
     end
 
     context 'has_many' do
+      context 'before assignment' do
+        it 'returns an empty array' do
+          a = A.new(1,2)
+          expect(a.bs).to eq([])
+        end
+      end
+
       context 'when assigning on the belongs_to side' do
         it 'assigns and retrieves a has_many relationship' do
           a = A.new(1,2)
@@ -54,7 +61,42 @@ describe Obj do
           a = A.new(1,2)
           b = B.new(3)
           a.bs = [b]
+          expect(a.bs.to_a).to eq([b])
+        end
+
+        it 'works when using a push' do
+          a = A.new(1,2)
+          b = B.new(3)
+          a.bs.push(b)
           expect(a.bs).to eq([b])
+        end
+
+        it 'works when using a <<' do
+          a = A.new(1,2)
+          b = B.new(3)
+          a.bs << b
+          expect(a.bs).to eq([b])
+        end
+
+        it 'works when using delete' do
+          a = A.new(1,2)
+          b1 = B.new(3)
+          b2 = B.new(4)
+
+          a.bs = [b1, b2]
+          expect(a.bs).to match_array([b1, b2])
+
+          a.bs.delete(b1)
+          expect(a.bs).to eq([b2])
+        end
+
+        it 'allows mapping using enumeration' do
+          a = A.new(1,2)
+          b1 = B.new(3)
+          b2 = B.new(4)
+
+          a.bs = [b1, b2]
+          expect(a.bs.map{|b| b.z}).to match_array([3, 4])
         end
       end
     end

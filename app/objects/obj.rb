@@ -47,6 +47,47 @@ class Relationship
   end
 end
 
+class HasManyArray
+  attr_reader :array
+  def initialize(obj, relationship, array)
+    @obj = obj
+    @relationship = relationship
+    @array = array
+  end
+
+  def push(val)
+    val.send("#{@relationship.inverse.name}=", @obj)
+    @obj.send(@relationship.name)
+  end
+
+  def <<(val)
+    push(val)
+  end
+
+  def delete(val)
+    val.send("#{@relationship.inverse.name}=", nil)
+    @obj.send(@relationship.name)
+  end
+
+  def to_a
+    @array
+  end
+
+  def ==(other)
+    if other.is_a?(Array)
+      @array == other
+    elsif other.is_a?(self.class)
+      @array == other.array
+    else
+      false
+    end
+  end
+
+  def method_missing(sym, *args, **hargs, &block)
+    @array.send(sym, *args, **hargs, &block)
+  end
+end
+
 class Obj
   attr_reader :id, :type_sym, :attrs, :rel_attrs
   def initialize(type_sym, attrs)
@@ -161,7 +202,7 @@ class Obj
         rel = relationships[sym]
         if rel.rel_type == :belongs_to
           old_val = @rel_attrs[rel.foreign_key]
-          new_val = rhs.id
+          new_val = rhs&.id
           @rel_attrs[rel.foreign_key] = new_val
           rel.inverse.index.update(old_val, new_val, self)
           return
@@ -185,7 +226,7 @@ class Obj
           id = @rel_attrs[rel.foreign_key]
           return id.nil? ? nil : self.class.objects[id]
         elsif rel.rel_type == :has_many
-          return rel.index[self.id]
+          return HasManyArray.new(self, rel, rel.index[self.id])
         end
       end
     end
