@@ -1,42 +1,139 @@
 require 'date'
 require 'securerandom'
 
+class Index
+  def initialize
+    @index = {}
+  end
+
+  def add(k, v)
+    if @index.has_key?(k)
+      @index[k].push(v)
+    else
+      @index[k] = [v]
+    end
+  end
+
+  def remove(k, v)
+    return if k.nil?
+    @index[k].delete(v)
+  end
+
+  def update(old_k, new_k, v)
+    remove(old_k, v)
+    add(new_k, v)
+  end
+
+  def [](index)
+    @index[index] || []
+  end
+end
+
+class Relationship
+  attr_reader :rel_type, :name, :foreign_key, :target_type_sym, :inverse_of, :index
+  def initialize(rel_type, rel_name, foreign_key, target_type_sym, inverse_of: nil, classes: nil)
+    @rel_type = rel_type
+    @name = rel_name
+    @foreign_key = foreign_key
+    @target_type_sym = target_type_sym
+    @inverse_of = inverse_of
+    @classes = classes
+    @index = Index.new if @rel_type == :has_many
+  end
+
+  def inverse
+    return @classes[@target_type_sym].relationships[@inverse_of] if @inverse_of
+    nil
+  end
+end
+
 class Obj
   attr_reader :id, :type_sym, :attrs, :rel_attrs
   def initialize(type_sym, attrs)
     @tags = []
     @type_sym = type_sym
     @attrs = attrs
-    @rel_attrs = {}
+    @rel_attrs = default_belongs_to_attrs
     @id =  SecureRandom.hex
 
     self.class.objects[@id] = self
+    self.class.classes[type_sym] = self.class
+    update_indexes(self)
+    self
   end
 
-  def self.belongs_to(relationship, foreign_key)
-    @relationships ||= {}
-    @relationships[relationship] = {
-      type: :belongs_to,
-      foreign_key: foreign_key,
-      name: relationship
-    }
+  def default_belongs_to_attrs
+    return @default_rel_attrs if @default_rel_attrs
+    @default_rel_attrs = self.class.relationships.select do |_, rel|
+      rel.rel_type == :belongs_to
+    end.map do |_, rel|
+      [rel.foreign_key, nil]
+    end.to_h
   end
 
-  def self.has_many(relationship, name, foreign_key)
+  def ==(other)
+    other.id == @id
+  end
+
+  def hash
+    @id
+  end
+
+  def self.belongs_to(rel_name, foreign_key, inverse_of: nil)
     @relationships ||= {}
-    @relationships[relationship] = {
-      type: :has_many,
-      foreign_key: foreign_key,
-      name: name
-    }
+    @relationships[rel_name] = Relationship.new(
+      :belongs_to,
+      rel_name,
+      foreign_key,
+      rel_name,
+      inverse_of: inverse_of,
+      classes: classes
+    )
+
+  end
+
+  def self.has_many(rel_name, target_type_sym, foreign_key, inverse_of: nil)
+    @relationships ||= {}
+    @relationships[rel_name] =
+      Relationship.new(
+        :has_many,
+        rel_name,
+        foreign_key,
+        target_type_sym,
+        classes: classes,
+        inverse_of: inverse_of
+      )
   end
 
   def self.relationships
-    @relationships || {}
+    @relationships ||= {}
+    @relationships
   end
 
   def self.objects
-    @objects || {}
+    @@objects ||= {}
+    @@objects
+  end
+
+  def self.classes
+    @@classes ||= {}
+    @@classes
+  end
+
+  def self.indexes
+    @indexes
+  end
+
+  def update_indexes(obj)
+    relationships.each do |_, rel|
+      if rel.rel_type == :belongs_to && rel.inverse_of
+        belongs_to_id = obj.send(rel.name)
+        if belongs_to_id
+          belongs_to_obj = self.class.objects[belongs_to_id]
+          rel.inverse.index.add(belongs_to_obj, obj) if belongs_to_obj
+        end
+      end
+    end
   end
 
   def relationships
@@ -62,10 +159,21 @@ class Obj
         return @attrs[sym] = rhs
       elsif relationships.include?(sym)
         rel = relationships[sym]
-        if rel[:type] == :belongs_to
-          return @rel_attrs[sym] = rel[:foreign_key]
-        elsif rel[:type] == :has_many
-          return self.class.objects[rel[:name]].select{|obj| obj.send(rel[:foreign_key] == self.id)}
+        if rel.rel_type == :belongs_to
+          old_val = @rel_attrs[rel.foreign_key]
+          new_val = rhs.id
+          @rel_attrs[rel.foreign_key] = new_val
+          rel.inverse.index.update(old_val, new_val, self)
+          return
+        elsif rel.rel_type == :has_many
+          raise 'has_many relationships can only accept array values' unless rhs.is_a?(Array)
+          rel.index[self.id].each do |obj|
+            obj.send("#{rel.rel_name}=", nil)
+          end
+          rhs.each do |obj|
+            obj.send("#{rel.inverse.name}=", self)
+          end
+          return
         end
       end
     elsif args.size == 0
@@ -73,10 +181,11 @@ class Obj
         return @attrs[sym]
       elsif relationships.include?(sym)
         rel = relationships[sym]
-        if rel[:type] == :belongs_to
-          return self.class.objects[rel[:name]][@rel_attrs[sym]]
-        elsif rel[:type] == :has_many
-          return self.class.objects[rel[:name]].select{|obj| obj.send(rel[:foreign_key] == self.id)}
+        if rel.rel_type == :belongs_to
+          id = @rel_attrs[rel.foreign_key]
+          return id.nil? ? nil : self.class.objects[id]
+        elsif rel.rel_type == :has_many
+          return rel.index[self.id]
         end
       end
     end
