@@ -91,9 +91,13 @@ end
 class Obj
   attr_reader :id, :type_sym, :attrs, :rel_attrs
   def initialize(type_sym, attrs)
-    @tags = []
+    reset(type_sym, attrs)
+  end
+
+  def reset(type_sym, attrs)
     @type_sym = type_sym
     @attrs = attrs
+    @tags = []
     @rel_attrs = default_belongs_to_attrs
     @id =  SecureRandom.hex
 
@@ -101,6 +105,11 @@ class Obj
     self.class.classes[type_sym] = self.class
     update_indexes(self)
     self
+  end
+
+  def dup
+    d = self.class.allocate
+    d.reset(@type_sym, @attrs)
   end
 
   def default_belongs_to_attrs

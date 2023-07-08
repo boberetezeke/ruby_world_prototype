@@ -29,6 +29,14 @@ describe Obj do
     end
   end
 
+  describe '#dup' do
+    it 'copies attributes over' do
+      a1 = A.new(1,2)
+      a2 = a1.dup
+      expect(a1.attrs).to eq(a2.attrs)
+    end
+  end
+
   context 'relationships' do
     context 'belongs_to' do
       it 'assigns and retrieves a belongs_to relationship' do

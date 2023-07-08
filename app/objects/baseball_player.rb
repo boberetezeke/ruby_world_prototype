@@ -1,7 +1,7 @@
 class Obj::BaseballPlayer < Obj
-  belongs_to :baseball_team, :baseball_team_id
-  belongs_to :fantasy_team, :fantasy_team_id
-  has_many :fantrax_stats, :fantrax_stat, :baseball_player_id
+  belongs_to :baseball_team, :baseball_team_id, inverse_of: :baseball_players
+  belongs_to :fantasy_team, :fantasy_team_id, inverse_of: :baseball_players
+  has_many :fantrax_stats, :fantrax_stat, :baseball_player_id, inverse_of: :baseball_player
 
   def self.default_display
     {
@@ -65,7 +65,10 @@ class Obj::BaseballPlayer < Obj
     end
     roster_pct_chg = roster_pct_chg / 100.0
     fantrax_stat = FantraxStat.new(date, days_back, fantasy_ppg, fantasy_pts, roster_pct, roster_pct_chg)
-    player = new(remote_id, name, baseball_team, positions, fantasy_team, age, [fantrax_stat], [])
+    player = new(remote_id, name, positions, age)
+    player.baseball_team = baseball_team
+    player.fantasy_team = fantasy_team
+    player.fantrax_stats = [fantrax_stat]
     player
   end
 end
