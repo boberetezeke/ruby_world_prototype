@@ -90,6 +90,21 @@ describe Obj do
           expect(a.bs).to eq([b2])
         end
 
+        it 'transfers from one owner to another if added to other owner' do
+          a1 = A.new(1,2)
+          a2 = A.new(3,4)
+          b1 = B.new(3)
+          b2 = B.new(4)
+
+          a1.bs = [b1]
+          a2.bs = [b2]
+
+          a1.bs.push(b2)
+
+          expect(a1.bs).to match_array([b1, b2])
+          expect(a2.bs).to match_array([])
+        end
+
         it 'allows mapping using enumeration' do
           a = A.new(1,2)
           b1 = B.new(3)
