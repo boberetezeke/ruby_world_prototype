@@ -1,5 +1,5 @@
 class Obj::Database
-  attr_reader :objs, :tags, :migrations_applied
+  attr_reader :objs, :tags, :version, :migrations_applied
 
   def initialize
     @objs = {}
@@ -13,7 +13,7 @@ class Obj::Database
   end
 
   def self.db_path
-    File.join(ENV['RW_DATABASE_PATH'], 'db.yml') || 'db.yml'
+    File.join(ENV['RW_DATABASE_PATH'] || '.', 'db.yml')
   end
 
   def serialize
