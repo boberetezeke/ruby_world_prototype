@@ -1,15 +1,24 @@
 class Obj::Database
   attr_reader :objs, :tags, :version, :migrations_applied
+  attr_reader :version_read
+
+  # constants
+  def self.original_version
+    1
+  end
+
+  def self.current_version
+    2
+  end
+
+  def self.migrations_applied_version
+    2
+  end
 
   def initialize
     @objs = {}
     @tags = {}
     @migrations_applied = []
-
-    # constants
-    @original_version = 1
-    @current_version = 2
-    @migrations_applied_version = 2
   end
 
   def self.db_path
@@ -18,7 +27,7 @@ class Obj::Database
 
   def serialize
     {
-      version: @current_version,
+      version: self.class.current_version,
       objs: @objs,
       tags: @tags,
       migrations_applied: @migrations_applied
@@ -26,9 +35,10 @@ class Obj::Database
   end
 
   def deserialize(yml)
+    @version_read = yml[:version]
     @objs = yml[:objs]
     @tags = yml[:tags]
-    @migrations_applied = yml[:version] >= @migrations_applied_version ? yml[:migrations_applied] : []
+    @migrations_applied = yml[:version] >= self.class.migrations_applied_version ? yml[:migrations_applied] : []
   end
 
   def write

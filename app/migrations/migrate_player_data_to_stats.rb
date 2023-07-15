@@ -1,5 +1,7 @@
 class MigratePlayerDataToStats
   def self.up(database)
+    return unless database.objs[:baseball_player]
+
     database.objs[:baseball_player].values.each do |bp|
       next unless bp.attrs[:fantrax_stats].nil?
 
