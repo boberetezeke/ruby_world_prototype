@@ -30,7 +30,7 @@ class Obj::BaseballPlayer < Obj
   end
 
   def fantrax_stat
-    fantrax_stats.first
+    fantrax_stats.to_a.first
   end
 
   def self.from_csv(db, date, days_back, remote_id, name, team_name, positions, status, age, fantasy_pts, fantasy_ppg, roster_pct, roster_pct_chg)

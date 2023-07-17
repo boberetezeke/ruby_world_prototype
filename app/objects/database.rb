@@ -18,6 +18,7 @@ class Obj::Database
   def initialize
     @objs = {}
     @tags = {}
+    @classes = {}
     @migrations_applied = []
   end
 
@@ -30,6 +31,7 @@ class Obj::Database
       version: self.class.current_version,
       objs: @objs,
       tags: @tags,
+      classes: @classes,
       migrations_applied: @migrations_applied
     }
   end
@@ -38,6 +40,7 @@ class Obj::Database
     @version_read = yml[:version]
     @objs = yml[:objs]
     @tags = yml[:tags]
+    @classes = yml[:classes]
     @migrations_applied = yml[:version] >= self.class.migrations_applied_version ? yml[:migrations_applied] : []
   end
 
@@ -77,11 +80,31 @@ class Obj::Database
 
     yml = File.open(db_path) { |f| YAML.load(f) }
     database.deserialize(yml)
+    database.reset_indexes
+    database.index_objects
     database = migrate(Migrations.migrations, database)
     database
   end
 
+  def reset_indexes
+    @classes.each do |type_sym, klass|
+      eval(klass).relationships.values.each do |relationship|
+        relationship.reset_index
+      end
+    end
+  end
+
+  def index_objects
+    @objs.each do |type_sym, objs|
+      objs.each do |id, obj|
+        obj.reset(type_sym, id, obj.attrs, rel_attrs: obj.rel_attrs)
+      end
+    end
+  end
+
   def add_obj(obj)
+    class_name = obj.class.to_s
+    @classes[obj.type_sym] = class_name
     objs_of_type = @objs[obj.type_sym] || {}
     @objs[obj.type_sym] = objs_of_type if @objs[obj.type_sym].nil?
 

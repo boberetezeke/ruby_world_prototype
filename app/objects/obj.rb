@@ -3,6 +3,10 @@ require 'securerandom'
 
 class Index
   def initialize
+    reset
+  end
+
+  def reset
     @index = {}
   end
 
@@ -39,6 +43,10 @@ class Relationship
     @inverse_of = inverse_of
     @classes = classes
     @index = Index.new if @rel_type == :has_many
+  end
+
+  def reset_index
+    @index&.reset
   end
 
   def inverse
@@ -91,15 +99,15 @@ end
 class Obj
   attr_reader :id, :type_sym, :attrs, :rel_attrs
   def initialize(type_sym, attrs)
-    reset(type_sym, attrs)
+    reset(type_sym, SecureRandom.hex, attrs)
   end
 
-  def reset(type_sym, attrs)
+  def reset(type_sym, id, attrs, rel_attrs: nil)
     @type_sym = type_sym
+    @id = id
     @attrs = attrs
     @tags = []
-    @rel_attrs = default_belongs_to_attrs
-    @id =  SecureRandom.hex
+    @rel_attrs = rel_attrs || default_belongs_to_attrs
 
     self.class.objects[@id] = self
     self.class.classes[type_sym] = self.class
@@ -109,7 +117,7 @@ class Obj
 
   def dup
     d = self.class.allocate
-    d.reset(@type_sym, @attrs)
+    d.reset(@type_sym, @id, @attrs)
   end
 
   def default_belongs_to_attrs
@@ -177,11 +185,8 @@ class Obj
   def update_indexes(obj)
     relationships.each do |_, rel|
       if rel.rel_type == :belongs_to && rel.inverse_of
-        belongs_to_id = obj.send(rel.name)
-        if belongs_to_id
-          belongs_to_obj = self.class.objects[belongs_to_id]
-          rel.inverse.index.add(belongs_to_obj, obj) if belongs_to_obj
-        end
+        belongs_to_obj = obj.send(rel.name)
+        rel.inverse.index.add(belongs_to_obj.id, obj) if belongs_to_obj
       end
     end
   end

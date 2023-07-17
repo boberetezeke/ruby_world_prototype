@@ -51,7 +51,7 @@ module F
         when :string
           val
         when :float
-          f[:format] % [val]
+          val ? f[:format] % [val] : ''
         end
       end
     }

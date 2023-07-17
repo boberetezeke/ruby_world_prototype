@@ -3,6 +3,20 @@ require_relative '../../app/objects/database'
 require_relative '../../app/migrations'
 require 'yaml'
 
+class A < Obj
+  has_many :bs, :b, :a_id, inverse_of: :a
+  def initialize(x, y)
+    super(:a, {x: x, y: y})
+  end
+end
+
+class B < Obj
+  belongs_to :a, :a_id, inverse_of: :bs
+  def initialize(z)
+    super(:b, {z: z})
+  end
+end
+
 describe Obj::Database do
   subject { Obj::Database.new }
 
@@ -42,9 +56,23 @@ describe Obj::Database do
       expect(database.version_read).to eq(Obj::Database.current_version)
     end
   end
-  describe '.migrate' do
-    it 'applies migration if it hasnt been applied' do
 
+  context 'when loading after save' do
+    it 'load and save' do
+      a = A.new(1,2)
+      b = B.new(3)
+      b.a = a
+
+      subject.add_obj(a)
+      subject.add_obj(b)
+
+      subject.write
+      database = Obj::Database.read
+
+      a2 = database.objs[:a].values.first
+
+      expect(a2.bs.to_a.size).to eq(1)
+      expect(a2.bs.to_a.first.z).to eq(3)
     end
   end
 end

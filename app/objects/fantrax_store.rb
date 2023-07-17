@@ -30,9 +30,12 @@ class Obj::FantraxStore < Obj::Store
         Obj::BaseballPlayer.from_csv(@db, date, days_back, remote_id, name, team_name, positions, status, age, fantasy_pts, fantasy_ppg, roster_pct, roster_pct_chg)
       end
 
-      total = baseball_players.size
-      baseball_players
-        .select{|bp| bp.fantrax_stats.first.fantasy_pts > 0.0 }
+      baseball_players_with_stats =
+        baseball_players
+          .select{|bp| bp.fantrax_stats.first.fantasy_pts > 0.0 }
+
+      total = baseball_players_with_stats.size
+      baseball_players_with_stats
         .each_with_index do |baseball_player, index|
         puts("%.2f" % [(index / total.to_f) * 100]) if index % 100 == 0
         # puts "looking for baseball player: #{baseball_player.remote_id}"
@@ -63,6 +66,8 @@ class Obj::FantraxStore < Obj::Store
   end
 
   def find_or_add_baseball_team(baseball_team)
+    return nil unless baseball_team
+
     db_baseball_team = @db.find_by(:baseball_team, { name: baseball_team.name })
     return db_baseball_team if db_baseball_team
 
@@ -70,6 +75,8 @@ class Obj::FantraxStore < Obj::Store
   end
 
   def find_or_add_fantasy_team(fantasy_team)
+    return nil unless fantasy_team
+
     db_fantasy_team = @db.find_by(:fantasy_team, { name: fantasy_team.name })
     return db_fantasy_team if db_fantasy_team
 
