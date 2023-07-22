@@ -48,6 +48,7 @@ describe Obj::Database do
         version: Obj::Database.current_version,
         objs: {},
         tags: [],
+        classes: {},
         migrations_applied: []
       }
       File.open('db.yml', 'w') {|f| f.write(yml.to_yaml) }

@@ -20,7 +20,7 @@ class Index
 
   def remove(k, v)
     return if k.nil?
-    @index[k].delete(v)
+    @index[k]&.delete(v)
   end
 
   def update(old_k, new_k, v)
@@ -117,7 +117,7 @@ class Obj
 
   def dup
     d = self.class.allocate
-    d.reset(@type_sym, @id, @attrs)
+    d.reset(@type_sym, SecureRandom.hex, @attrs)
   end
 
   def default_belongs_to_attrs

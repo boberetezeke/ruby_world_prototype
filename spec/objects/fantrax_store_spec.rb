@@ -38,6 +38,7 @@ describe Obj::FantraxStore do
       blake_snell_stat = blake_snell.fantrax_stats.to_a.first
       expect(blake_snell_stat.fantasy_ppg).to eq(41)
       expect(blake_snell_stat.baseball_player).to eq(blake_snell)
+      expect(db.objs[:fantrax_stat].values.first.baseball_player).not_to be_nil
     end
   end
 end

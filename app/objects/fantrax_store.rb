@@ -43,7 +43,7 @@ class Obj::FantraxStore < Obj::Store
         db_baseball_player = find_or_add_baseball_player(baseball_player)
         db_baseball_team = find_or_add_baseball_team(baseball_player.baseball_team)
         db_fantasy_team = find_or_add_fantasy_team(baseball_player.fantasy_team)
-        db_fantrax_stat = create_fantrax_stat(baseball_player)
+        db_fantrax_stat = create_fantrax_stat(baseball_player, db_baseball_player)
 
         db_baseball_player.baseball_team = db_baseball_team if db_baseball_team
         db_baseball_player.fantasy_team = db_fantasy_team if db_fantasy_team
@@ -90,8 +90,10 @@ class Obj::FantraxStore < Obj::Store
     end
   end
 
-  def create_fantrax_stat(baseball_player)
+  def create_fantrax_stat(baseball_player, db_baseball_player)
     fantrax_stat = baseball_player.fantrax_stats.first
-    @db.add_obj(fantrax_stat.dup)
+    db_fantrax_stat = fantrax_stat.dup
+    db_fantrax_stat.baseball_player = db_baseball_player
+    @db.add_obj(fantrax_stat)
   end
 end
