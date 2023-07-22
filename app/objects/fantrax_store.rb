@@ -94,6 +94,6 @@ class Obj::FantraxStore < Obj::Store
     fantrax_stat = baseball_player.fantrax_stats.first
     db_fantrax_stat = fantrax_stat.dup
     db_fantrax_stat.baseball_player = db_baseball_player
-    @db.add_obj(fantrax_stat)
+    @db.add_obj(db_fantrax_stat)
   end
 end
