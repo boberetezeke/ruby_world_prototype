@@ -1,9 +1,11 @@
 class MigratePlayerDataToStats
   def self.up(database)
+    return unless database.objs[:baseball_player]
+
     database.objs[:baseball_player].values.each do |bp|
       next unless bp.attrs[:fantrax_stats].nil?
 
-      bp.attrs[:fantrax_stats] = [
+      bp.fantrax_stats = [
         Obj::FantraxStat.new(
           Date.new(2023,6,14),
           7,

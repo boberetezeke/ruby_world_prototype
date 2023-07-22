@@ -32,5 +32,13 @@ describe Obj::FantraxStore do
     it 'builds fantrax_stat objects' do
       expect(db.objs[:baseball_player].map{|k,bp| bp.fantrax_stats.size}).to eq([2,2,2,2,2])
     end
+
+    it 'has the correct stats in the fantrax object' do
+      blake_snell = db.objs[:baseball_player].values.find{|bp| bp.name == 'Blake Snell'}
+      blake_snell_stat = blake_snell.fantrax_stats.to_a.first
+      expect(blake_snell_stat.fantasy_ppg).to eq(41)
+      expect(blake_snell_stat.baseball_player).to eq(blake_snell)
+      expect(db.objs[:fantrax_stat].values.first.baseball_player).not_to be_nil
+    end
   end
 end

@@ -1,4 +1,7 @@
 class Obj::BaseballPlayer < Obj
+  belongs_to :baseball_team, :baseball_team_id, inverse_of: :baseball_players
+  belongs_to :fantasy_team, :fantasy_team_id, inverse_of: :baseball_players
+  has_many :fantrax_stats, :fantrax_stat, :baseball_player_id, inverse_of: :baseball_player
 
   def self.default_display
     {
@@ -17,34 +20,32 @@ class Obj::BaseballPlayer < Obj
     }
   end
 
-  def initialize(remote_id, name, baseball_team, positions, fantasy_team, age, fantrax_stats, rotowire_stats)
+  def initialize(remote_id, name, positions, age)
     super(:baseball_player, {
       remote_id: remote_id,
       name: name,
-      baseball_team: baseball_team,
       positions: positions,
-      fantasy_team: fantasy_team,
       age: age,
-      fantrax_stats: fantrax_stats,
-      rotowire_stats: rotowire_stats
     })
   end
 
   def fantrax_stat
-    fantrax_stats.first
+    fantrax_stats.to_a.first
   end
 
   def self.from_csv(db, date, days_back, remote_id, name, team_name, positions, status, age, fantasy_pts, fantasy_ppg, roster_pct, roster_pct_chg)
     remote_id = remote_id
     name = name
     if team_name != "(N/A)"
-      baseball_team = db.find_by(:baseball_team, name: team_name) || db.add_obj(Obj::BaseballTeam.new(team_name))
+      baseball_team = Obj::BaseballTeam.new(team_name)
+      # baseball_team = db.find_by(:baseball_team, name: team_name) || db.add_obj(Obj::BaseballTeam.new(team_name))
     else
       baseball_team = nil
     end
     positions = positions.split(/,/)
     if status != "FA"
-      fantasy_team = db.find_by(:fantasy_team, name: status) || db.add_obj(Obj::FantasyTeam.new(status))
+      # fantasy_team = db.find_by(:fantasy_team, name: status) || db.add_obj(Obj::FantasyTeam.new(status))
+      fantasy_team = Obj::FantasyTeam.new(status)
     else
       fantasy_team = nil
     end
@@ -64,7 +65,10 @@ class Obj::BaseballPlayer < Obj
     end
     roster_pct_chg = roster_pct_chg / 100.0
     fantrax_stat = FantraxStat.new(date, days_back, fantasy_ppg, fantasy_pts, roster_pct, roster_pct_chg)
-    player = new(remote_id, name, baseball_team, positions, fantasy_team, age, [fantrax_stat], [])
+    player = new(remote_id, name, positions, age)
+    player.baseball_team = baseball_team
+    player.fantasy_team = fantasy_team
+    player.fantrax_stats = [fantrax_stat]
     player
   end
 end
