@@ -98,8 +98,8 @@ end
 
 class Obj
   attr_reader :id, :type_sym, :attrs, :rel_attrs
-  def initialize(type_sym, attrs)
-    reset(type_sym, SecureRandom.hex, attrs)
+  def initialize(type_sym, attrs, rel_attrs: {})
+    reset(type_sym, SecureRandom.hex, attrs, rel_attrs: rel_attrs)
   end
 
   def reset(type_sym, id, attrs, rel_attrs: nil)
@@ -127,6 +127,18 @@ class Obj
     end.map do |_, rel|
       [rel.foreign_key, nil]
     end.to_h
+  end
+
+  def self.defaults
+    nil
+  end
+
+  def defaults
+    self.class.defaults || {}
+  end
+
+  def attrs_and_defaults
+    defaults.merge(@attrs)
   end
 
   def ==(other)
@@ -191,6 +203,10 @@ class Obj
     end
   end
 
+  def inspect
+    @attrs.merge(@rel_attrs)
+  end
+
   def relationships
     self.class.relationships
   end
@@ -210,7 +226,7 @@ class Obj
     if m && args.size == 1
       sym = m[1].to_sym
       rhs = args.first
-      if @attrs.keys.include?(sym)
+      if attrs_and_defaults.keys.include?(sym)
         return @attrs[sym] = rhs
       elsif relationships.include?(sym)
         rel = relationships[sym]
@@ -232,7 +248,7 @@ class Obj
         end
       end
     elsif args.size == 0
-      if @attrs.keys.include?(sym)
+      if attrs_and_defaults.keys.include?(sym)
         return @attrs[sym]
       elsif relationships.include?(sym)
         rel = relationships[sym]

@@ -52,6 +52,8 @@ module F
           val
         when :float
           val ? f[:format] % [val] : ''
+        when :datetime
+          val ? val.strftime(f[:format] || "%Y-%m-%d %H:%M:%S") : ''
         end
       end
     }
@@ -82,6 +84,7 @@ module F
         start_index -= page_size
         start_index = 0 if start_index < 0
       else
+        break if end_index == total - 1
         if start_index + page_size < total
           start_index += page_size
         end
