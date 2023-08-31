@@ -80,10 +80,14 @@ class Obj::Database
 
     yml = File.open(db_path) { |f| YAML.load(f) }
     database.deserialize(yml)
-    database.reset_indexes
-    database.index_objects
+    database.reindex
     database = migrate(Migrations.migrations, database)
     database
+  end
+
+  def reindex
+    reset_indexes
+    index_objects
   end
 
   def reset_indexes
@@ -118,6 +122,10 @@ class Obj::Database
       value_hash = finder_hash.keys.map{|key| [key, obj.send(key)]}.to_h
       value_hash == finder_hash
     end.first
+  end
+
+  def inspect
+    @objs.map{|k,v| [k, v.size]}
   end
 
   def method_missing(sym, *args)
