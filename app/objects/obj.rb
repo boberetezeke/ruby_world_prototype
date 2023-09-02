@@ -1,100 +1,11 @@
 require 'date'
 require 'securerandom'
 
-class Index
-  def initialize
-    reset
-  end
+path = File.dirname(__FILE__)
 
-  def reset
-    @index = {}
-  end
-
-  def add(k, v)
-    if @index.has_key?(k)
-      @index[k].push(v)
-    else
-      @index[k] = [v]
-    end
-  end
-
-  def remove(k, v)
-    return if k.nil?
-    @index[k]&.delete(v)
-  end
-
-  def update(old_k, new_k, v)
-    remove(old_k, v)
-    add(new_k, v)
-  end
-
-  def [](index)
-    @index[index] || []
-  end
-end
-
-class Relationship
-  attr_reader :rel_type, :name, :foreign_key, :target_type_sym, :inverse_of, :index
-  def initialize(rel_type, rel_name, foreign_key, target_type_sym, inverse_of: nil, classes: nil)
-    @rel_type = rel_type
-    @name = rel_name
-    @foreign_key = foreign_key
-    @target_type_sym = target_type_sym
-    @inverse_of = inverse_of
-    @classes = classes
-    @index = Index.new if @rel_type == :has_many
-  end
-
-  def reset_index
-    @index&.reset
-  end
-
-  def inverse
-    return @classes[@target_type_sym].relationships[@inverse_of] if @inverse_of
-    nil
-  end
-end
-
-class HasManyArray
-  attr_reader :array
-  def initialize(obj, relationship, array)
-    @obj = obj
-    @relationship = relationship
-    @array = array
-  end
-
-  def push(val)
-    val.send("#{@relationship.inverse.name}=", @obj)
-    @obj.send(@relationship.name)
-  end
-
-  def <<(val)
-    push(val)
-  end
-
-  def delete(val)
-    val.send("#{@relationship.inverse.name}=", nil)
-    @obj.send(@relationship.name)
-  end
-
-  def to_a
-    @array
-  end
-
-  def ==(other)
-    if other.is_a?(Array)
-      @array == other
-    elsif other.is_a?(self.class)
-      @array == other.array
-    else
-      false
-    end
-  end
-
-  def method_missing(sym, *args, **hargs, &block)
-    @array.send(sym, *args, **hargs, &block)
-  end
-end
+load "#{path}/obj/index.rb"
+load "#{path}/obj/has_many_array.rb"
+load "#{path}/obj/relationship.rb"
 
 class Obj
   attr_reader :id, :type_sym, :attrs, :rel_attrs
@@ -221,44 +132,71 @@ class Obj
     end
   end
 
+  def belongs_to_assign(rel, rhs)
+    old_val = @rel_attrs[rel.foreign_key]
+    new_val = rhs&.id
+    @rel_attrs[rel.foreign_key] = new_val
+    rel.inverse.index.update(old_val, new_val, self)
+  end
+
+  def has_many_assign(rel, rhs)
+    raise 'has_many relationships can only accept array values' unless rhs.is_a?(Array)
+    rel.index[self.id].each do |obj|
+      obj.send("#{rel.rel_name}=", nil)
+    end
+    rhs.each do |obj|
+      obj.send("#{rel.inverse.name}=", self)
+    end
+  end
+
+  def attr_assign(sym, rhs)
+    if attrs_and_defaults.keys.include?(sym)
+      return @attrs[sym] = rhs
+    elsif relationships.include?(sym)
+      rel = relationships[sym]
+      if rel.rel_type == :belongs_to
+        belongs_to_assign(rel, rhs)
+        return true
+      elsif rel.rel_type == :has_many
+        has_many_assign(rel, rhs)
+        return true
+      end
+    end
+    return false
+  end
+
+  def relationship_read(sym)
+    rel = relationships[sym]
+    if rel.rel_type == :belongs_to
+      id = @rel_attrs[rel.foreign_key]
+      ret_value = id.nil? ? nil : self.class.objects[id]
+      return [true, ret_value]
+    elsif rel.rel_type == :has_many
+      return [true, HasManyArray.new(self, rel, rel.index[self.id])]
+    end
+    return [false, nil]
+  end
+
+  def attr_read(sym)
+    if attrs_and_defaults.keys.include?(sym)
+      return [true, @attrs[sym]]
+    elsif relationships.include?(sym)
+      complete, ret_value = relationship_read(sym)
+      return [complete, ret_value] if complete
+    end
+    return [false, nil]
+  end
+
   def method_missing(sym, *args)
     m = /^(.*)=/.match(sym.to_s)
     if m && args.size == 1
       sym = m[1].to_sym
       rhs = args.first
-      if attrs_and_defaults.keys.include?(sym)
-        return @attrs[sym] = rhs
-      elsif relationships.include?(sym)
-        rel = relationships[sym]
-        if rel.rel_type == :belongs_to
-          old_val = @rel_attrs[rel.foreign_key]
-          new_val = rhs&.id
-          @rel_attrs[rel.foreign_key] = new_val
-          rel.inverse.index.update(old_val, new_val, self)
-          return
-        elsif rel.rel_type == :has_many
-          raise 'has_many relationships can only accept array values' unless rhs.is_a?(Array)
-          rel.index[self.id].each do |obj|
-            obj.send("#{rel.rel_name}=", nil)
-          end
-          rhs.each do |obj|
-            obj.send("#{rel.inverse.name}=", self)
-          end
-          return
-        end
-      end
+      complete = attr_assign(sym, rhs)
+      return rhs if complete
     elsif args.size == 0
-      if attrs_and_defaults.keys.include?(sym)
-        return @attrs[sym]
-      elsif relationships.include?(sym)
-        rel = relationships[sym]
-        if rel.rel_type == :belongs_to
-          id = @rel_attrs[rel.foreign_key]
-          return id.nil? ? nil : self.class.objects[id]
-        elsif rel.rel_type == :has_many
-          return HasManyArray.new(self, rel, rel.index[self.id])
-        end
-      end
+      complete, ret_value = attr_read(sym)
+      return ret_value if complete
     end
 
     super

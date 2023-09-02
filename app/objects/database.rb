@@ -15,11 +15,18 @@ class Obj::Database
     2
   end
 
+  attr_accessor :tag_context
+
   def initialize
     @objs = {}
     @tags = {}
     @classes = {}
     @migrations_applied = []
+    @tag_context = 'tag'
+  end
+
+  def tag_context
+    @tag_context
   end
 
   def self.db_path

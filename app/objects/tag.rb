@@ -1,4 +1,4 @@
-class Obj::Tag
+class Obj::Tag < Obj
   attr :name
   def initialize(name)
     @name = name
