@@ -1,7 +1,7 @@
 class Obj::Tag < Obj
-  attr :name
+  has_many :taggings, :tagging, :tag_id, inverse_of: :tag
   def initialize(name)
-    @name = name
+    super(:tag, {name: name})
   end
 
   def ==(other)

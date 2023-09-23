@@ -7,7 +7,7 @@ class HasManyArray
   end
 
   def push(val)
-    val.send("#{@relationship.inverse.name}=", @obj)
+    val.send("#{@relationship.inverse(val).name}=", @obj)
     @obj.send(@relationship.name)
   end
 
@@ -16,7 +16,7 @@ class HasManyArray
   end
 
   def delete(val)
-    val.send("#{@relationship.inverse.name}=", nil)
+    val.send("#{@relationship.inverse(val).name}=", nil)
     @obj.send(@relationship.name)
   end
 

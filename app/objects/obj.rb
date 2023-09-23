@@ -8,17 +8,16 @@ load "#{path}/obj/has_many_array.rb"
 load "#{path}/obj/relationship.rb"
 
 class Obj
-  attr_reader :id, :type_sym, :attrs, :rel_attrs
-  def initialize(type_sym, attrs, rel_attrs: {})
-    reset(type_sym, SecureRandom.hex, attrs, rel_attrs: rel_attrs)
+  attr_reader :id, :type_sym, :attrs
+
+  def initialize(type_sym, attrs)
+    reset(type_sym, SecureRandom.hex, attrs)
   end
 
-  def reset(type_sym, id, attrs, rel_attrs: nil)
+  def reset(type_sym, id, attrs)
     @type_sym = type_sym
     @id = id
-    @attrs = attrs
-    @tags = []
-    @rel_attrs = rel_attrs || default_belongs_to_attrs
+    @attrs = default_belongs_to_attrs.merge(attrs)
 
     self.class.objects[@id] = self
     self.class.classes[type_sym] = self.class
@@ -60,30 +59,36 @@ class Obj
     @id
   end
 
-  def self.belongs_to(rel_name, foreign_key, inverse_of: nil)
+  def self.belongs_to(rel_name, foreign_key, inverse_of: nil, polymorphic: nil)
     @relationships ||= {}
-    @relationships[rel_name] = Relationship.new(
+    relationship = Relationship.new(
       :belongs_to,
       rel_name,
       foreign_key,
       rel_name,
       inverse_of: inverse_of,
+      polymorphic: polymorphic,
       classes: classes
     )
-
+    @relationships[rel_name] = relationship
+    # @relationships[relationship.foreign_key] = relationship
+    # @relationships[relationship.foreign_type] = relationship if relationship.foreign_type
   end
 
-  def self.has_many(rel_name, target_type_sym, foreign_key, inverse_of: nil)
+  def self.has_many(rel_name, target_type_sym, foreign_key, inverse_of: nil, polymorphic: false, as: nil)
     @relationships ||= {}
-    @relationships[rel_name] =
+    relationship =
       Relationship.new(
         :has_many,
         rel_name,
         foreign_key,
         target_type_sym,
         classes: classes,
-        inverse_of: inverse_of
+        inverse_of: inverse_of,
+        polymorphic: polymorphic,
+        as: as
       )
+    @relationships[rel_name] = relationship
   end
 
   def self.relationships
@@ -109,13 +114,13 @@ class Obj
     relationships.each do |_, rel|
       if rel.rel_type == :belongs_to && rel.inverse_of
         belongs_to_obj = obj.send(rel.name)
-        rel.inverse.index.add(belongs_to_obj.id, obj) if belongs_to_obj
+        rel.inverse(obj).index.add(belongs_to_obj.id, obj) if belongs_to_obj
       end
     end
   end
 
   def inspect
-    @attrs.merge(@rel_attrs)
+    @attrs
   end
 
   def relationships
@@ -133,10 +138,11 @@ class Obj
   end
 
   def belongs_to_assign(rel, rhs)
-    old_val = @rel_attrs[rel.foreign_key]
+    old_val = @attrs[rel.foreign_key]
     new_val = rhs&.id
-    @rel_attrs[rel.foreign_key] = new_val
-    rel.inverse.index.update(old_val, new_val, self)
+    @attrs[rel.foreign_key] = new_val
+    @attrs[rel.foreign_type] = rhs.type_sym if rel.polymorphic
+    rel.inverse(self).index.update(old_val, new_val, self)
   end
 
   def has_many_assign(rel, rhs)
@@ -145,7 +151,7 @@ class Obj
       obj.send("#{rel.rel_name}=", nil)
     end
     rhs.each do |obj|
-      obj.send("#{rel.inverse.name}=", self)
+      obj.send("#{rel.inverse(self).name}=", self)
     end
   end
 
@@ -168,7 +174,7 @@ class Obj
   def relationship_read(sym)
     rel = relationships[sym]
     if rel.rel_type == :belongs_to
-      id = @rel_attrs[rel.foreign_key]
+      id = @attrs[rel.foreign_key]
       ret_value = id.nil? ? nil : self.class.objects[id]
       return [true, ret_value]
     elsif rel.rel_type == :has_many
@@ -200,9 +206,5 @@ class Obj
     end
 
     super
-  end
-
-  def add_tag(tag)
-    @tags.push(tag) unless @tags.include(tag)
   end
 end

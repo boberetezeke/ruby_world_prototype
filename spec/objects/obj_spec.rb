@@ -14,6 +14,27 @@ class B < Obj
   end
 end
 
+class C < Obj
+  belongs_to :dable, :dable_id, polymorphic: true, inverse_of: :cs
+  def initialize(x)
+    super(:c, {x: x})
+  end
+end
+
+class D1 < Obj
+  has_many :cs, :c, :dable_id, as: :dable
+  def initialize(y)
+    super(:d1, {y: y})
+  end
+end
+
+class D2 < Obj
+  has_many :cs, :c, :dable_id, as: :dable
+  def initialize(z)
+    super(:d2, {z: z})
+  end
+end
+
 describe Obj do
   context 'attributes' do
     it 'can retrieve initialized attributes' do
@@ -120,6 +141,29 @@ describe Obj do
 
           a.bs = [b1, b2]
           expect(a.bs.map{|b| b.z}).to match_array([3, 4])
+        end
+      end
+
+      context 'polymorphic belongs tos' do
+        it 'gets both objects from D1 to D2 with assigning to d1, d2' do
+          c1 = C.new(1)
+          c2 = C.new(1)
+          d = D1.new(2)
+
+          d.cs = [c1, c2]
+
+          expect(d.cs).to match_array([c1, c2])
+        end
+
+        it 'gets both objects from D1 to D2 when assigning to c' do
+          c1 = C.new(1)
+          c2 = C.new(1)
+          d = D1.new(2)
+
+          c1.dable = d
+          c2.dable = d
+
+          expect(d.cs).to match_array([c1, c2])
         end
       end
     end
