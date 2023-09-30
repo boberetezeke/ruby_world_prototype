@@ -26,5 +26,17 @@ describe Obj::Tag do
       tagging.taggable = car
       expect(car.taggings).to eq([tagging])
     end
+
+    it 'goes from tag to object and object to tag' do
+      car = Obj::Car.new('red')
+      tag = Obj::Tag.new(name: 'red things')
+
+      tagging = Obj::Tagging.new
+      tagging.taggable = car
+      tagging.tag = tag
+
+      expect(tag.objs).to eq([car])
+      expect(car.tags).to eq([tag])
+    end
   end
 end
