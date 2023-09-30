@@ -75,7 +75,12 @@ class Obj
     # @relationships[relationship.foreign_type] = relationship if relationship.foreign_type
   end
 
-  def self.has_many(rel_name, target_type_sym, foreign_key, inverse_of: nil, polymorphic: false, as: nil)
+  def self.has_many(rel_name, target_type_sym, foreign_key,
+                    inverse_of: nil,
+                    polymorphic: false,
+                    as: nil,
+                    through: nil,
+                    through_next: nil)
     @relationships ||= {}
     relationship =
       Relationship.new(
@@ -86,7 +91,9 @@ class Obj
         classes: classes,
         inverse_of: inverse_of,
         polymorphic: polymorphic,
-        as: as
+        as: as,
+        through: through,
+        through_next: through_next
       )
     @relationships[rel_name] = relationship
   end
@@ -178,7 +185,21 @@ class Obj
       ret_value = id.nil? ? nil : self.class.objects[id]
       return [true, ret_value]
     elsif rel.rel_type == :has_many
-      return [true, HasManyArray.new(self, rel, rel.index[self.id])]
+      if rel.through
+        complete, has_many_array = relationship_read(rel.through)
+        return [false, nil] unless complete
+        objs = has_many_array.to_a.map do |obj|
+          val_or_vals = obj.send(rel.through_next)
+          if val_or_vals.is_a?(HasManyArray)
+            val_or_vals.to_a
+          else
+            [val_or_vals]
+          end
+        end.flatten
+        return [true, objs]
+      else
+        return [true, HasManyArray.new(self, rel, rel.index[self.id])]
+      end
     end
     return [false, nil]
   end
