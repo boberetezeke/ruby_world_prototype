@@ -1,5 +1,17 @@
 require 'csv'
 
+class ChargeRule
+  attr_reader :tags, :proc
+  def initialize(db, tag_names, proc)
+    @tags = db.objs[:tag].values.select{|tag| tag_names.include?(tag.name)}
+    @proc = proc
+  end
+
+  def match?(charge)
+    proc.call(charge)
+  end
+end
+
 class Obj::BankOfAmericaStore < Obj::Store
   def initialize(db, directory)
     super()
@@ -41,6 +53,31 @@ class Obj::BankOfAmericaStore < Obj::Store
 
       db_charge.vendor = db_vendor
       db_charge.credit_card = db_credit_card
+      tag_charge(db_charge)
+    end
+  end
+
+  def charge_rules
+    [
+      ChargeRule.new(@db, ['steve', 'expenses'],
+                     ->(charge) { /kindle/i.match(charge.vendor.name) })
+    ]
+  end
+
+  def tag_charge(db_charge)
+    charge_rules.each do |charge_rule|
+      if charge_rule.match?(db_charge)
+        find_or_add_tags(charge_rule.tags, db_charge)
+      end
+    end
+  end
+
+  def find_or_add_tags(tags, db_change)
+    tags.each do |tag|
+      tagging = Obj::Tagging.new
+      tagging.tag = tag
+      tagging.taggable = db_change
+      @db.add_obj(tagging)
     end
   end
 
