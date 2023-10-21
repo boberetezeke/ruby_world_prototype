@@ -148,8 +148,9 @@ class Obj
     old_val = @attrs[rel.foreign_key]
     new_val = rhs&.id
     @attrs[rel.foreign_key] = new_val
-    @attrs[rel.foreign_type] = rhs.type_sym if rel.polymorphic
+    @attrs[rel.foreign_type] = rhs.type_sym if rel.polymorphic && !rhs.nil?
     rel.inverse(self).index.update(old_val, new_val, self)
+    @attrs[rel.foreign_type] = nil if rel.polymorphic && rhs.nil?
   end
 
   def has_many_assign(rel, rhs)

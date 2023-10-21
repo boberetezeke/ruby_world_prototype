@@ -1,5 +1,5 @@
 class Obj::Database
-  attr_reader :objs, :tags, :version, :migrations_applied
+  attr_reader :objs, :version, :migrations_applied
   attr_reader :version_read
 
   # constants
@@ -117,6 +117,12 @@ class Obj::Database
     @objs[obj.type_sym] = objs_of_type if @objs[obj.type_sym].nil?
 
     objs_of_type[obj.id] = obj
+    obj
+  end
+
+  def rem_obj(obj)
+    objs_of_type = @objs[obj.type_sym] || {}
+    objs_of_type.delete(obj.id)
     obj
   end
 

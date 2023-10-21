@@ -8,6 +8,8 @@ class Index
   end
 
   def add(k, v)
+    return if k.nil?
+
     if @index.has_key?(k)
       @index[k].push(v)
     else
@@ -17,6 +19,7 @@ class Index
 
   def remove(k, v)
     return if k.nil?
+
     @index[k]&.delete(v)
   end
 
