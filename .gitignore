@@ -1,3 +1,5 @@
 local_db.rb
 .idea
 .env
+.byebug_history
+response.html
