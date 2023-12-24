@@ -6,6 +6,7 @@ require_relative '../../app/objects/tag'
 require_relative '../../app/objects/tagging'
 require_relative '../../app/objects/taggable'
 
+require_relative '../../app/objects/financial/bank_of_america_charge_rules'
 require_relative '../../app/objects/financial/charge_rule'
 require_relative '../../app/objects/charge'
 require_relative '../../app/objects/vendor'
@@ -57,7 +58,7 @@ describe Obj::BankOfAmericaStore do
 
     it 'changes tags if already tagged' do
       allow(subject).to receive(:charge_rules).and_return([
-         Financial::ChargeRule.new(db, ['entertainment'],
+         Financial::ChargeRule.new(db, ['entertainment'], 'description',
                                    ->(charge) { /kindle/i.match(charge.vendor.name) })
       ])
 

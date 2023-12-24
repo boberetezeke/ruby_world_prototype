@@ -16,6 +16,7 @@ load "#{path}/objects/taggable.rb"
 load "#{path}/objects/tag.rb"
 
 load "#{path}/objects/financial/charge_rule.rb"
+load "#{path}/objects/financial/bank_of_america_charge_rules.rb"
 load "#{path}/objects/charge.rb"
 load "#{path}/objects/vendor.rb"
 load "#{path}/objects/credit_card.rb"

@@ -11,7 +11,7 @@ class Index
     return if k.nil?
 
     if @index.has_key?(k)
-      @index[k].push(v)
+      @index[k].push(v) unless @index[k].include?(v)
     else
       @index[k] = [v]
     end
