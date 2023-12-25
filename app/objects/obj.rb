@@ -1,113 +1,23 @@
 require 'date'
 require 'securerandom'
 
-class Index
-  def initialize
-    reset
-  end
+path = File.dirname(__FILE__)
 
-  def reset
-    @index = {}
-  end
-
-  def add(k, v)
-    if @index.has_key?(k)
-      @index[k].push(v)
-    else
-      @index[k] = [v]
-    end
-  end
-
-  def remove(k, v)
-    return if k.nil?
-    @index[k]&.delete(v)
-  end
-
-  def update(old_k, new_k, v)
-    remove(old_k, v)
-    add(new_k, v)
-  end
-
-  def [](index)
-    @index[index] || []
-  end
-end
-
-class Relationship
-  attr_reader :rel_type, :name, :foreign_key, :target_type_sym, :inverse_of, :index
-  def initialize(rel_type, rel_name, foreign_key, target_type_sym, inverse_of: nil, classes: nil)
-    @rel_type = rel_type
-    @name = rel_name
-    @foreign_key = foreign_key
-    @target_type_sym = target_type_sym
-    @inverse_of = inverse_of
-    @classes = classes
-    @index = Index.new if @rel_type == :has_many
-  end
-
-  def reset_index
-    @index&.reset
-  end
-
-  def inverse
-    return @classes[@target_type_sym].relationships[@inverse_of] if @inverse_of
-    nil
-  end
-end
-
-class HasManyArray
-  attr_reader :array
-  def initialize(obj, relationship, array)
-    @obj = obj
-    @relationship = relationship
-    @array = array
-  end
-
-  def push(val)
-    val.send("#{@relationship.inverse.name}=", @obj)
-    @obj.send(@relationship.name)
-  end
-
-  def <<(val)
-    push(val)
-  end
-
-  def delete(val)
-    val.send("#{@relationship.inverse.name}=", nil)
-    @obj.send(@relationship.name)
-  end
-
-  def to_a
-    @array
-  end
-
-  def ==(other)
-    if other.is_a?(Array)
-      @array == other
-    elsif other.is_a?(self.class)
-      @array == other.array
-    else
-      false
-    end
-  end
-
-  def method_missing(sym, *args, **hargs, &block)
-    @array.send(sym, *args, **hargs, &block)
-  end
-end
+load "#{path}/obj/index.rb"
+load "#{path}/obj/has_many_array.rb"
+load "#{path}/obj/relationship.rb"
 
 class Obj
-  attr_reader :id, :type_sym, :attrs, :rel_attrs
-  def initialize(type_sym, attrs, rel_attrs: {})
-    reset(type_sym, SecureRandom.hex, attrs, rel_attrs: rel_attrs)
+  attr_reader :id, :type_sym, :attrs
+
+  def initialize(type_sym, attrs)
+    reset(type_sym, SecureRandom.hex, attrs)
   end
 
-  def reset(type_sym, id, attrs, rel_attrs: nil)
+  def reset(type_sym, id, attrs)
     @type_sym = type_sym
     @id = id
-    @attrs = attrs
-    @tags = []
-    @rel_attrs = rel_attrs || default_belongs_to_attrs
+    @attrs = default_belongs_to_attrs.merge(attrs)
 
     self.class.objects[@id] = self
     self.class.classes[type_sym] = self.class
@@ -149,30 +59,43 @@ class Obj
     @id
   end
 
-  def self.belongs_to(rel_name, foreign_key, inverse_of: nil)
+  def self.belongs_to(rel_name, foreign_key, inverse_of: nil, polymorphic: nil)
     @relationships ||= {}
-    @relationships[rel_name] = Relationship.new(
+    relationship = Relationship.new(
       :belongs_to,
       rel_name,
       foreign_key,
       rel_name,
       inverse_of: inverse_of,
+      polymorphic: polymorphic,
       classes: classes
     )
-
+    @relationships[rel_name] = relationship
+    # @relationships[relationship.foreign_key] = relationship
+    # @relationships[relationship.foreign_type] = relationship if relationship.foreign_type
   end
 
-  def self.has_many(rel_name, target_type_sym, foreign_key, inverse_of: nil)
+  def self.has_many(rel_name, target_type_sym, foreign_key,
+                    inverse_of: nil,
+                    polymorphic: false,
+                    as: nil,
+                    through: nil,
+                    through_next: nil)
     @relationships ||= {}
-    @relationships[rel_name] =
+    relationship =
       Relationship.new(
         :has_many,
         rel_name,
         foreign_key,
         target_type_sym,
         classes: classes,
-        inverse_of: inverse_of
+        inverse_of: inverse_of,
+        polymorphic: polymorphic,
+        as: as,
+        through: through,
+        through_next: through_next
       )
+    @relationships[rel_name] = relationship
   end
 
   def self.relationships
@@ -198,13 +121,13 @@ class Obj
     relationships.each do |_, rel|
       if rel.rel_type == :belongs_to && rel.inverse_of
         belongs_to_obj = obj.send(rel.name)
-        rel.inverse.index.add(belongs_to_obj.id, obj) if belongs_to_obj
+        rel.inverse(obj).index.add(belongs_to_obj.id, obj) if belongs_to_obj
       end
     end
   end
 
   def inspect
-    @attrs.merge(@rel_attrs)
+    @attrs
   end
 
   def relationships
@@ -221,50 +144,89 @@ class Obj
     end
   end
 
+  def belongs_to_assign(rel, rhs)
+    old_val = @attrs[rel.foreign_key]
+    new_val = rhs&.id
+    @attrs[rel.foreign_key] = new_val
+    @attrs[rel.foreign_type] = rhs.type_sym if rel.polymorphic && !rhs.nil?
+    rel.inverse(self).index.update(old_val, new_val, self)
+    @attrs[rel.foreign_type] = nil if rel.polymorphic && rhs.nil?
+  end
+
+  def has_many_assign(rel, rhs)
+    raise 'has_many relationships can only accept array values' unless rhs.is_a?(Array)
+    rel.index[self.id].each do |obj|
+      obj.send("#{rel.rel_name}=", nil)
+    end
+    rhs.each do |obj|
+      obj.send("#{rel.inverse(self).name}=", self)
+    end
+  end
+
+  def attr_assign(sym, rhs)
+    if attrs_and_defaults.keys.include?(sym)
+      return @attrs[sym] = rhs
+    elsif relationships.include?(sym)
+      rel = relationships[sym]
+      if rel.rel_type == :belongs_to
+        belongs_to_assign(rel, rhs)
+        return true
+      elsif rel.rel_type == :has_many
+        has_many_assign(rel, rhs)
+        return true
+      end
+    end
+    return false
+  end
+
+  def relationship_read(sym)
+    rel = relationships[sym]
+    if rel.rel_type == :belongs_to
+      id = @attrs[rel.foreign_key]
+      ret_value = id.nil? ? nil : self.class.objects[id]
+      return [true, ret_value]
+    elsif rel.rel_type == :has_many
+      if rel.through
+        complete, has_many_array = relationship_read(rel.through)
+        return [false, nil] unless complete
+        objs = has_many_array.to_a.map do |obj|
+          val_or_vals = obj.send(rel.through_next)
+          if val_or_vals.is_a?(HasManyArray)
+            val_or_vals.to_a
+          else
+            [val_or_vals]
+          end
+        end.flatten
+        return [true, objs]
+      else
+        return [true, HasManyArray.new(self, rel, rel.index[self.id])]
+      end
+    end
+    return [false, nil]
+  end
+
+  def attr_read(sym)
+    if attrs_and_defaults.keys.include?(sym)
+      return [true, @attrs[sym]]
+    elsif relationships.include?(sym)
+      complete, ret_value = relationship_read(sym)
+      return [complete, ret_value] if complete
+    end
+    return [false, nil]
+  end
+
   def method_missing(sym, *args)
     m = /^(.*)=/.match(sym.to_s)
     if m && args.size == 1
       sym = m[1].to_sym
       rhs = args.first
-      if attrs_and_defaults.keys.include?(sym)
-        return @attrs[sym] = rhs
-      elsif relationships.include?(sym)
-        rel = relationships[sym]
-        if rel.rel_type == :belongs_to
-          old_val = @rel_attrs[rel.foreign_key]
-          new_val = rhs&.id
-          @rel_attrs[rel.foreign_key] = new_val
-          rel.inverse.index.update(old_val, new_val, self)
-          return
-        elsif rel.rel_type == :has_many
-          raise 'has_many relationships can only accept array values' unless rhs.is_a?(Array)
-          rel.index[self.id].each do |obj|
-            obj.send("#{rel.rel_name}=", nil)
-          end
-          rhs.each do |obj|
-            obj.send("#{rel.inverse.name}=", self)
-          end
-          return
-        end
-      end
+      complete = attr_assign(sym, rhs)
+      return rhs if complete
     elsif args.size == 0
-      if attrs_and_defaults.keys.include?(sym)
-        return @attrs[sym]
-      elsif relationships.include?(sym)
-        rel = relationships[sym]
-        if rel.rel_type == :belongs_to
-          id = @rel_attrs[rel.foreign_key]
-          return id.nil? ? nil : self.class.objects[id]
-        elsif rel.rel_type == :has_many
-          return HasManyArray.new(self, rel, rel.index[self.id])
-        end
-      end
+      complete, ret_value = attr_read(sym)
+      return ret_value if complete
     end
 
     super
-  end
-
-  def add_tag(tag)
-    @tags.push(tag) unless @tags.include(tag)
   end
 end

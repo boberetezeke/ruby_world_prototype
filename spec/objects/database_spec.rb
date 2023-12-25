@@ -36,9 +36,22 @@ describe Obj::Database do
 
   describe '#write' do
     it 'writes the database to disk' do
+      # a = A.new(1, 2)
+      # b = B.new(3)
+      # b.a = b
+      # subject.add_obj(a)
+      # subject.add_obj(b)
+      #
       subject.write
       yaml = YAML.load(File.read('db.yml'))
       expect(yaml[:version]).to eq(Obj::Database.current_version)
+      #
+      # a_yaml = YAML.load(File.read("a/#{a.id}.yml"))
+      # expect(a_yaml[:attrs][:x]).to eq(1)
+      # expect(a_yaml[:attrs][:y]).to eq(2)
+      #
+      # b_yaml = YAML.load(File.read("b/#{b.id}.yml"))
+      # expect(b_yaml[:attrs][:z]).to eq(3)
     end
   end
 

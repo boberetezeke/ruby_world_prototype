@@ -14,6 +14,79 @@ class B < Obj
   end
 end
 
+class C < Obj
+  belongs_to :dable, :dable_id, polymorphic: true, inverse_of: :cs
+  def initialize(x)
+    super(:c, {x: x})
+  end
+end
+
+class D1 < Obj
+  has_many :cs, :c, :dable_id, as: :dable
+  def initialize(y)
+    super(:d1, {y: y})
+  end
+end
+
+class D2 < Obj
+  has_many :cs, :c, :dable_id, as: :dable
+  def initialize(z)
+    super(:d2, {z: z})
+  end
+end
+
+class E < Obj
+  has_many :fs, :f, :e_id, inverse_of: :e
+  has_many :gs, nil, nil, through: :fs, through_next: :g
+
+  def initialize(e)
+    super(:e, {e: e})
+  end
+end
+
+class F < Obj
+  belongs_to :e, :e_id, inverse_of: :fs
+  belongs_to :g, :g_id, inverse_of: :fs
+
+  def initialize(f)
+    super(:f, {f: f})
+  end
+end
+
+class G < Obj
+  has_many :fs, :f, :g_id, inverse_of: :g
+
+  def initialize(g)
+    super(:g, {g: g})
+  end
+end
+
+class I < Obj
+  has_many :js, :j, :i_id, inverse_of: :i
+  has_many :ks, nil, nil, through: :js, through_next: :ks
+
+  def initialize(i)
+    super(:i, {i: i})
+  end
+end
+
+class J < Obj
+  has_many :ks, :k, :j_id, inverse_of: :j
+  belongs_to :i, :i_id, inverse_of: :js
+
+  def initialize(j)
+    super(:j, {j: j})
+  end
+end
+
+class K < Obj
+  belongs_to :j, :j_id, inverse_of: :ks
+
+  def initialize(k)
+    super(:k, {k: k})
+  end
+end
+
 describe Obj do
   context 'attributes' do
     it 'can retrieve initialized attributes' do
@@ -120,6 +193,55 @@ describe Obj do
 
           a.bs = [b1, b2]
           expect(a.bs.map{|b| b.z}).to match_array([3, 4])
+        end
+      end
+
+      context 'polymorphic belongs tos' do
+        it 'gets both objects from D1 to D2 with assigning to d1, d2' do
+          c1 = C.new(1)
+          c2 = C.new(1)
+          d = D1.new(2)
+
+          d.cs = [c1, c2]
+
+          expect(d.cs).to match_array([c1, c2])
+        end
+
+        it 'gets both objects from D1 to D2 when assigning to c' do
+          c1 = C.new(1)
+          c2 = C.new(1)
+          d = D1.new(2)
+
+          c1.dable = d
+          c2.dable = d
+
+          expect(d.cs).to match_array([c1, c2])
+        end
+      end
+
+      context 'has_many throughs' do
+        it 'accesses objects through a belongs_to' do
+          e = E.new(1)
+          f = F.new(2)
+          g = G.new(3)
+
+          f.e = e
+          f.g = g
+
+          gs = e.gs
+          expect(gs).to eq([g])
+        end
+
+        it 'accesses objects through a has_many' do
+          i = I.new(1)
+          j = J.new(2)
+          k = K.new(3)
+
+          j.i = i
+          k.j = j
+
+          ks = i.ks
+          expect(ks).to eq([k])
         end
       end
     end

@@ -1,5 +1,5 @@
-class Obj::FantasyTeam < Obj
-  has_many :baseball_players, :basebase_player, :fantasy_team_id, inverse_of: :baseball_player
+class Obj::Vendor < Obj
+  has_many :charges, :charge, :vendor_id, inverse_of: :vendor
 
   def self.default_display
     {
@@ -13,8 +13,8 @@ class Obj::FantasyTeam < Obj
     }
   end
 
-  def initialize(name)
-    super(:fantasy_team, {name: name})
+  def initialize(name, address)
+    super(:vendor, {name: name, address: address})
   end
 end
 

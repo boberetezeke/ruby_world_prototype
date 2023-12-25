@@ -8,56 +8,7 @@ def camelize(string, uppercase_first_letter = true)
 end
 
 module F
-  def self.fields(cols, display)
-    cols.map do |col_info|
-      if col_info.is_a?(Hash)
-        full_id = col_info.values.first
-      else
-        full_id = col_info
-      end
-
-      if full_id.is_a?(Proc)
-        [nil, { title: '', type: :string, width: 20}, full_id]
-      else
-        d = display
-        last_id = full_id
-        if full_id.is_a?(Array)
-          if full_id.size > 1
-            d = eval("Obj::" + camelize(full_id[-2].to_s)).default_display
-            last_id = full_id[-1]
-          else
-            full_id = full_id[0]
-            last_id = full_id
-          end
-        end
-        [last_id, d[:fields][last_id], full_id]
-      end
-    end
-  end
-
-  def self.data_lambda(fields)
-    ->(obj){
-      fields.map do |id, f, full_id|
-        if full_id.is_a?(Proc)
-          val = full_id.call(obj)
-        elsif full_id.is_a?(Array)
-          val = obj
-          full_id.each{|sym| val = val&.send(sym) }
-        else
-          val = obj.send(id)
-        end
-
-        case f[:type]
-        when :string
-          val
-        when :float
-          val ? f[:format] % [val] : ''
-        when :datetime
-          val ? val.strftime(f[:format] || "%Y-%m-%d %H:%M:%S") : ''
-        end
-      end
-    }
-  end
+  extend Obj::Mixins::Display
 
   def self.format(fields)
     fields.map{ |id, f, _| "%-#{f[:width]}s" }.join(' ')
@@ -67,14 +18,71 @@ module F
     fields.map{ |id, f, _| f[:title] }
   end
 
+  def self.display_grouped_objs(grouped_objs, cols, page_size)
+    all_keys = grouped_objs.keys
+    total = all_keys.size
+    index = 0
+    loop do
+      key = all_keys[index]
+      objs = grouped_objs[key]
+      prev_index = (index > 0) ? index - 1 : nil
+      prev_key = (index > 0) ? all_keys[prev_index] : nil
+      next_index = (index < total - 1) ? index + 1 : nil
+      next_key = (index < total - 1) ? all_keys[next_index] : nil
+
+      puts "----- #{key}"
+      puts
+      display_objs(objs, cols, page_size)
+
+      puts
+      puts "(p - previous (#{prev_index}) #{prev_key}, q - quit, enter - next (#{next_index}) #{next_key}) #{total}: "
+
+      s = gets
+      break if s =~ /q/i
+      if s =~ /p/i
+        index -= 1
+        index = 0 if index < 0
+      else
+        break if index == total - 1
+        if index
+          index += 1
+        end
+      end
+    end
+  end
+
+  def self.display_objs(objs, cols, page_size)
+    display = objs.first.class.default_display
+    if cols.empty?
+      cols = display[:sym_sets][:default]
+    end
+
+    f = F.fields(cols, display)
+    data_lambda = F.data_lambda(f)
+    format = F.format(f)
+    titles = F.titles(f)
+
+    puts(format % titles)
+    F.paginated_display(objs, format, data_lambda, page_size)
+  end
+
   def self.paginated_display(objs, format, data_lambda, page_size)
     total = objs.size
+
+    klass = objs.first.class
+    total_obj =  klass.respond_to?(:total_obj) ? klass.total_obj(objs) :nil
+
     start_index = 0
     loop do
       end_index = start_index + page_size - 1
       end_index = total - 1 if end_index > total
-      objs[start_index..end_index].each do |obj|
-        puts(format % data_lambda.call(obj) )
+      objs[start_index..end_index].each.with_index do |obj, index|
+        puts(format % data_lambda.call(obj))
+      end
+
+      if total_obj
+        puts
+        puts(format % data_lambda.call(total_obj))
       end
 
       puts "(p - previous, q - quit, enter - next) #{start_index}-#{end_index} of #{total}: "
@@ -109,21 +117,23 @@ def f(objs, *args, **hargs)
     return
   end
 
-  obj_types = objs.map{|o| o.class.to_s}.uniq
-  if obj_types.size == 1
-    display = objs.first.class.default_display
-    if cols.empty?
-      cols = display[:sym_sets][:default]
+  if objs.is_a?(Hash)
+    group_by_obj_types = objs.map do |_, v|
+      v.map{|o| o.class.to_s}.uniq
+    end.uniq
+    if group_by_obj_types.size != 1
+      puts "all grouped by types must be the same"
+    else
+      F.display_grouped_objs(objs, cols, page_size)
     end
-
-    f = F.fields(cols, display)
-    data_lambda = F.data_lambda(f)
-    format = F.format(f)
-    titles = F.titles(f)
-
-    puts(format % titles)
-    F.paginated_display(objs, format, data_lambda, page_size)
+  elsif objs.is_a?(Array)
+    obj_types = objs.map{|o| o.class.to_s}.uniq
+    if obj_types.size == 1
+      F.display_objs(objs, cols, page_size)
+    else
+      puts "all objects must be of the same type: #{obj_types}"
+    end
   else
-    puts "all objects must be of the same type: #{obj_types}"
+    puts "must be either an array or a hash of arrays"
   end
 end

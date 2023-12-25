@@ -1,5 +1,5 @@
 class Obj::Database
-  attr_reader :objs, :tags, :version, :migrations_applied
+  attr_reader :objs, :version, :migrations_applied
   attr_reader :version_read
 
   # constants
@@ -15,11 +15,17 @@ class Obj::Database
     2
   end
 
+  attr_accessor :tag_context
+
   def initialize
     @objs = {}
-    @tags = {}
     @classes = {}
     @migrations_applied = []
+    @tag_context = 'tag'
+  end
+
+  def tag_context
+    @tag_context
   end
 
   def self.db_path
@@ -30,7 +36,6 @@ class Obj::Database
     {
       version: self.class.current_version,
       objs: @objs,
-      tags: @tags,
       classes: @classes,
       migrations_applied: @migrations_applied
     }
@@ -39,7 +44,6 @@ class Obj::Database
   def deserialize(yml)
     @version_read = yml[:version]
     @objs = yml[:objs]
-    @tags = yml[:tags]
     @classes = yml[:classes]
     @migrations_applied = yml[:version] >= self.class.migrations_applied_version ? yml[:migrations_applied] : []
   end
@@ -80,10 +84,14 @@ class Obj::Database
 
     yml = File.open(db_path) { |f| YAML.load(f) }
     database.deserialize(yml)
-    database.reset_indexes
-    database.index_objects
+    database.reindex
     database = migrate(Migrations.migrations, database)
     database
+  end
+
+  def reindex
+    reset_indexes
+    index_objects
   end
 
   def reset_indexes
@@ -97,7 +105,7 @@ class Obj::Database
   def index_objects
     @objs.each do |type_sym, objs|
       objs.each do |id, obj|
-        obj.reset(type_sym, id, obj.attrs, rel_attrs: obj.rel_attrs)
+        obj.reset(type_sym, id, obj.attrs)
       end
     end
   end
@@ -112,12 +120,22 @@ class Obj::Database
     obj
   end
 
+  def rem_obj(obj)
+    objs_of_type = @objs[obj.type_sym] || {}
+    objs_of_type.delete(obj.id)
+    obj
+  end
+
   def find_by(type_sym, finder_hash)
     objs_of_type = @objs[type_sym] || {}
     objs_of_type.values.select do |obj|
       value_hash = finder_hash.keys.map{|key| [key, obj.send(key)]}.to_h
       value_hash == finder_hash
     end.first
+  end
+
+  def inspect
+    @objs.map{|k,v| [k, v.size]}
   end
 
   def method_missing(sym, *args)

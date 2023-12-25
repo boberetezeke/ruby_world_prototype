@@ -4,5 +4,8 @@ class Obj::Store
 
   def sync
   end
-end
 
+  def status_proc
+    ->(str) { puts str }
+  end
+end
