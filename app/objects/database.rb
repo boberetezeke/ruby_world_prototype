@@ -28,8 +28,12 @@ class Obj::Database
     @tag_context
   end
 
-  def self.db_path
+  def self.db_yml_path
     File.join(ENV['RW_DATABASE_PATH'] || '.', 'db.yml')
+  end
+
+  def self.db_marshal_path
+    File.join(ENV['RW_DATABASE_PATH'] || '.', 'db.mrs')
   end
 
   def serialize
@@ -49,7 +53,9 @@ class Obj::Database
   end
 
   def write
-    File.open(self.class.db_path, "w") {|f| f.write(serialize.to_yaml) }
+    serialize_data = serialize
+    File.open(self.class.db_yml_path, "w") {|f| f.write(serialize_data.to_yaml) }
+    File.open(self.class.db_marshal_path, "w") {|f| Marshal.dump(serialize_data, f) }
   end
 
   def add_migrations_applied(migrations)
@@ -80,10 +86,13 @@ class Obj::Database
 
   def self.read
     database = self.new
-    return database unless File.exist?(db_path)
+    return database unless File.exist?(db_yml_path)
 
-    yml = File.open(db_path) { |f| YAML.load(f) }
-    database.deserialize(yml)
+    puts "before"
+    serialized_data = File.open(db_marshal_path) { |f| Marshal.load(f) } if File.exist?(db_marshal_path)
+    serialized_data ||= File.open(db_yml_path) { |f| YAML.load(f) }
+    puts "after"
+    database.deserialize(serialized_data)
     database.reindex
     database = migrate(Migrations.migrations, database)
     database
