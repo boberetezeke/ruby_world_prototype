@@ -88,10 +88,8 @@ class Obj::Database
     database = self.new
     return database unless File.exist?(db_yml_path)
 
-    puts "before"
     serialized_data = File.open(db_marshal_path) { |f| Marshal.load(f) } if File.exist?(db_marshal_path)
     serialized_data ||= File.open(db_yml_path) { |f| YAML.load(f) }
-    puts "after"
     database.deserialize(serialized_data)
     database.reindex
     database = migrate(Migrations.migrations, database)
@@ -135,12 +133,16 @@ class Obj::Database
     obj
   end
 
-  def find_by(type_sym, finder_hash)
+  def where_by(type_sym, finder_hash)
     objs_of_type = @objs[type_sym] || {}
     objs_of_type.values.select do |obj|
       value_hash = finder_hash.keys.map{|key| [key, obj.send(key)]}.to_h
       value_hash == finder_hash
-    end.first
+    end
+  end
+
+  def find_by(type_sym, finder_hash)
+    where_by(type_sym, finder_hash).first
   end
 
   def inspect

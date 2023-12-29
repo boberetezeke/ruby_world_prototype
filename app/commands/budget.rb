@@ -94,16 +94,18 @@ module Financial
     end
 
     def find_budget_target(tags)
-      budget_targets = @db.find_by(:budget_target, {month: current_month})
+      budget_targets = @db.where_by(:budget_target, {month: current_month})
       return nil unless budget_targets
       budget_targets.find do |budget_target|
-        Set.new(budget_target.map(&:name)) == Set.new(tags.map(&:name))
+        Set.new(budget_target.tags.map(&:name)) == Set.new(tags.map(&:name))
       end
     end
 
     def rm(tags)
       budget_target = find_budget_target(tags)
-      return "can't find budget_target with tags: #{tags.map(&:name).join(', ')}"
+      unless budget_target
+        return "can't find budget_target with tags: #{tags.map(&:name).join(', ')}"
+      end
 
       @db.rem_obj(budget_target)
 
@@ -111,12 +113,12 @@ module Financial
     end
 
     def display
-      budget_targets = @db.find_by(:budget_target, {month: current_month})
-      if budget_targets.nil?
+      budget_targets = @db.where_by(:budget_target, {month: current_month})
+      if budget_targets.empty?
         return "No budget targets set for current month: #{current_month}"
       end
       budget_targets.map do |budget_target|
-        "%-20s %.2f" % [budget_target.tags.map(&:tag_name).join(','), budget_target.amount]
+        "%-20s %.2f" % [budget_target.tags.map(&:name).join(','), budget_target.amount]
       end.join("\n")
     end
   end
