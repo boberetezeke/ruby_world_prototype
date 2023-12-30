@@ -19,8 +19,8 @@ describe Financial::BudgetService do
   let(:charge_a_c_12_13_tagging_a) { Obj::Tagging.tag(tag_a, charge_a_c_12_13) }
   let(:charge_a_c_12_13_tagging_c) { Obj::Tagging.tag(tag_c, charge_a_c_12_13) }
   let(:charge_b_12_20_tagging_b) { Obj::Tagging.tag(tag_b, charge_b_12_20) }
-  let(:budget_target_a_c) { Obj::BudgetTarget.new(12, amount: 2.30)}
-  let(:budget_target_b) { Obj::BudgetTarget.new(12, amount: 10.30)}
+  let(:budget_target_a_c) { Obj::BudgetTarget.new(12, amount: 31.00)}
+  let(:budget_target_b) { Obj::BudgetTarget.new(12, amount: 31.00)}
   let(:budget_target_a_c_tagging_a) { Obj::Tagging.tag(tag_a, budget_target_a_c) }
   let(:budget_target_a_c_tagging_c) { Obj::Tagging.tag(tag_c, budget_target_a_c) }
   let(:budget_target_b_tagging_b) { Obj::Tagging.tag(tag_b, budget_target_b) }
@@ -45,6 +45,24 @@ describe Financial::BudgetService do
     db.add_obj(budget_target_a_c_tagging_a)
     db.add_obj(budget_target_a_c_tagging_c)
     db.add_obj(budget_target_b_tagging_b)
+  end
+
+  describe '.days_in_month' do
+    it 'returns the correct days for a Feb leap-year' do
+      expect(described_class.days_in_month(Date.new(2020,2,1))).to eq(29)
+    end
+
+    it 'returns the correct days for a Feb non-leap-year' do
+      expect(described_class.days_in_month(Date.new(2021,2,1))).to eq(28)
+    end
+
+    it 'returns the correct days for a Nov' do
+      expect(described_class.days_in_month(Date.new(2023,11,1))).to eq(30)
+    end
+
+    it 'returns the correct days for a Dec' do
+      expect(described_class.days_in_month(Date.new(2023,12,1))).to eq(31)
+    end
   end
 
   describe '.weeks_in_month' do
@@ -109,21 +127,26 @@ describe Financial::BudgetService do
 
   describe '#calc_amounts' do
     it 'calcs amounts correctly for budget_target_a_c' do
-      subject.calc_amounts(budget_target_a_c)
-      expect(budget_target_a_c.calc_amount).to eq(1.00)
-      expect(budget_target_a_c.week_1_calc_amount).to eq(1.00)
-      expect(budget_target_a_c.week_2_calc_amount).to eq(1.00)
-      expect(budget_target_a_c.week_3_calc_amount).to eq(1.00)
-      expect(budget_target_a_c.week_4_calc_amount).to eq(1.00)
+      subject.calc_amounts_for_budget_target(Date.new(2023,12,1), budget_target_a_c)
+      expect(budget_target_a_c.calc_amount).to eq(3.77)
+      expect(budget_target_a_c.week_1_calc_amount).to eq(1.23)
+      expect(budget_target_a_c.week_2_calc_amount).to eq(2.54)
+      expect(budget_target_a_c.week_3_calc_amount).to eq(0.00)
+      expect(budget_target_a_c.week_4_calc_amount).to eq(0.00)
     end
 
     it 'calcs amounts correctly for budget_target_b' do
-      subject.calc_amounts(budget_target_b)
-      expect(budget_target_a_c.calc_amount).to eq(1.00)
-      expect(budget_target_a_c.week_1_calc_amount).to eq(1.00)
-      expect(budget_target_a_c.week_2_calc_amount).to eq(1.00)
-      expect(budget_target_a_c.week_3_calc_amount).to eq(1.00)
-      expect(budget_target_a_c.week_4_calc_amount).to eq(1.00)
+      subject.calc_amounts_for_budget_target(Date.new(2023,12,1), budget_target_b)
+      expect(budget_target_b.amount).to eq(31.00)
+      expect(budget_target_b.week_1_amount).to eq(10.00)
+      expect(budget_target_b.week_2_amount).to eq(7.00)
+      expect(budget_target_b.week_3_amount).to eq(7.00)
+      expect(budget_target_b.week_4_amount).to eq(7.00)
+      expect(budget_target_b.calc_amount).to eq(4.04)
+      expect(budget_target_b.week_1_calc_amount).to eq(0.00)
+      expect(budget_target_b.week_2_calc_amount).to eq(0.00)
+      expect(budget_target_b.week_3_calc_amount).to eq(4.04)
+      expect(budget_target_b.week_4_calc_amount).to eq(0.00)
     end
   end
 end

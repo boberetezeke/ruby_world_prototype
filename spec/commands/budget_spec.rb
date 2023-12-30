@@ -13,7 +13,21 @@ describe Financial::Budget do
   let(:expenses) { 'expenses' }
   let(:tag_personal) { Obj::Tag.new(personal) }
   let(:tag_expenses) { Obj::Tag.new(expenses) }
-  let(:budget_target) { Obj::BudgetTarget.new(Time.now.month, amount: 100) }
+  let(:budget_target) {
+    Obj::BudgetTarget.new(
+      Time.now.month,
+      amount: 100,
+      week_1_amount: 20,
+      week_2_amount: 25,
+      week_3_amount: 25,
+      week_4_amount: 30,
+      calc_amount: 75,
+      week_1_calc_amount: 20,
+      week_2_calc_amount: 25,
+      week_3_calc_amount: 10,
+      week_4_calc_amount: 20
+    )
+  }
   let(:tagging_personal) {
     tagging = Obj::Tagging.new
     tagging.tag = tag_personal
@@ -40,7 +54,9 @@ describe Financial::Budget do
       db.add_obj(tagging_personal)
       db.add_obj(tagging_expenses)
 
-      expect(subject.run).to eq("personal,expenses    100.00")
+      #                                   1         2         3         4         5         6         7         8
+      #                          123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789
+      expect(subject.run).to eq("personal,expenses  100(75.00%)  20(100.00%)  25(100.00%)  25(40.00%)   30(66.67%)  ")
     end
   end
 

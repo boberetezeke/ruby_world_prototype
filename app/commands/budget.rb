@@ -118,8 +118,20 @@ module Financial
         return "No budget targets set for current month: #{current_month}"
       end
       budget_targets.map do |budget_target|
-        "%-20s %.2f" % [budget_target.tags.map(&:name).join(','), budget_target.amount]
+        format = "%-19s%-12s %-12s %-12s %-12s %-12s"
+        format % [
+          budget_target.tags.map(&:name).join(','),
+          amount_str(budget_target.amount, budget_target.calc_amount),
+          amount_str(budget_target.week_1_amount, budget_target.week_1_calc_amount),
+          amount_str(budget_target.week_2_amount, budget_target.week_2_calc_amount),
+          amount_str(budget_target.week_3_amount, budget_target.week_3_calc_amount),
+          amount_str(budget_target.week_4_amount, budget_target.week_4_calc_amount)
+        ]
       end.join("\n")
+    end
+
+    def amount_str(amount, calc_amount)
+      "%.0f(%.2f%%)" % [amount, (100.0 * calc_amount) / amount]
     end
   end
 end
