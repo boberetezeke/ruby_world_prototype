@@ -97,7 +97,7 @@ module Financial
       budget_targets = @db.where_by(:budget_target, {month: current_month})
       return nil unless budget_targets
       budget_targets.find do |budget_target|
-        Set.new(budget_target.tags.map(&:name)) == Set.new(tags.map(&:name))
+        Obj::Tag.tags_match?(budget_target.tags, tags)
       end
     end
 
