@@ -5,6 +5,7 @@ module Financial
     end
 
     def self.weeks_in_month(date)
+      date = Date.new(date.year, date.month, 1)
       weeks = []
       month = date.month
       week_start = date.cwday

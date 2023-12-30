@@ -21,11 +21,11 @@ describe Financial::Budget do
       week_2_amount: 25,
       week_3_amount: 25,
       week_4_amount: 30,
-      calc_amount: 75,
-      week_1_calc_amount: 20,
-      week_2_calc_amount: 25,
-      week_3_calc_amount: 10,
-      week_4_calc_amount: 20
+      calc_amount: -75,
+      week_1_calc_amount: -20,
+      week_2_calc_amount: -25,
+      week_3_calc_amount: -10,
+      week_4_calc_amount: -20
     )
   }
   let(:tagging_personal) {

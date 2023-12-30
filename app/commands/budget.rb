@@ -18,6 +18,8 @@ module Financial
           errors = validate_rm(args)
           return errors if errors
           return rm(@tags)
+        when :calc
+          return calc
         when :help
           return "                    display budget targets\n" +
                  "set [tags] amount   set a budget target\n" +
@@ -112,6 +114,10 @@ module Financial
       nil
     end
 
+    def calc
+      BudgetService.new(@db).calc_amounts(Time.now.to_date)
+    end
+
     def display
       budget_targets = @db.where_by(:budget_target, {month: current_month})
       if budget_targets.empty?
@@ -131,7 +137,9 @@ module Financial
     end
 
     def amount_str(amount, calc_amount)
-      "%.0f(%.2f%%)" % [amount, (100.0 * calc_amount) / amount]
+      return "" if amount.nil? || amount == 0
+      return "%.0f" % [amount] if calc_amount.nil?
+      "%.0f(%.2f%%)" % [amount, -((100.0 * calc_amount) / amount)]
     end
   end
 end
