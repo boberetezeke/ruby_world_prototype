@@ -54,28 +54,35 @@ describe Financial::Budget do
       db.add_obj(tagging_personal)
       db.add_obj(tagging_expenses)
 
+      ret, output = subject.run
+
       #                                   1         2         3         4         5         6         7         8
       #                          123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789 123456789
-      expect(subject.run).to eq("personal,expenses  100(75.00%)  20(100.00%)  25(100.00%)  25(40.00%)   30(66.67%)  ")
+      expect(output).to eq("personal,expenses  100(75.00%)  20(100.00%)  25(100.00%)  25(40.00%)   30(66.67%)  ")
+      expect(ret).to eq([budget_target])
     end
   end
 
   context 'set budget' do
     it "doesn't sets a budget target if tags can't be found" do
-      errors = subject.run(:set, [personal, expenses], 100)
+      ret, errors = subject.run(:set, [personal, expenses], 100)
+      expect(ret).to be_nil
       expect(errors).to eq("tag(s) not found: personal, expenses")
     end
 
     it "doesn't set a budget target if only one tag is found" do
       db.add_obj(tag_personal)
-      errors = subject.run(:set, [personal, expenses], 100)
+      ret, errors = subject.run(:set, [personal, expenses], 100)
+      expect(ret).to be_nil
       expect(errors).to eq("tag(s) not found: #{expenses}")
     end
 
     it "sets a budget target if tags can be found" do
       db.add_obj(tag_personal)
       db.add_obj(tag_expenses)
-      errors = subject.run(:set, [personal, expenses], 100)
+      ret, errors = subject.run(:set, [personal, expenses], 100)
+      expect(ret).not_to be_nil
+      expect(ret.class).to eq(Obj::BudgetTarget)
       expect(errors).to be_nil
       expect(db.budget_targets.size).to eq(1)
     end
@@ -83,7 +90,8 @@ describe Financial::Budget do
 
   context 'rm budget' do
     it "handles the budget not existing" do
-      errors = subject.run(:rm, [personal, expenses])
+      ret, errors = subject.run(:rm, [personal, expenses])
+      expect(ret).to be_nil
       expect(errors).to eq("tag(s) not found: #{personal}, #{expenses}")
     end
 
@@ -91,7 +99,8 @@ describe Financial::Budget do
       db.add_obj(tag_personal)
       db.add_obj(tag_expenses)
 
-      errors = subject.run(:rm, [personal, expenses])
+      ret, errors = subject.run(:rm, [personal, expenses])
+      expect(ret).to be_nil
       expect(errors).to eq("can't find budget_target with tags: #{personal}, #{expenses}")
     end
 
@@ -103,7 +112,8 @@ describe Financial::Budget do
       db.add_obj(tagging_personal)
       db.add_obj(tagging_expenses)
 
-      errors = subject.run(:rm, [personal, expenses])
+      ret, errors = subject.run(:rm, [personal, expenses])
+      expect(ret).to be_nil
       expect(errors).to be_nil
       expect(db.budget_targets.size).to eq(0)
     end

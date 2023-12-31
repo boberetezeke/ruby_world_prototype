@@ -30,7 +30,9 @@ describe CsvWriter do
     let(:csv_objs) { [csv_obj_1] }
 
     it 'generates a csv'  do
-      CsvWriter.run(filename, csv_objs)
+      ret, output = CsvWriter.run(filename, csv_objs)
+      expect(ret).to eq(filename)
+      expect(output).to eq("Wrote #{csv_objs.size} rows to #{filename}")
       expect(CSV.read(filename)).to eq([
         ['x', 'y'],
         ['hello', '5.40']
@@ -45,7 +47,10 @@ describe CsvWriter do
     let(:csv_objs) { { 'hello' => [csv_obj_1, csv_obj_3], 'goodbye' => [csv_obj_2] } }
 
     it 'generates a csv'  do
-      CsvWriter.run(filename, csv_objs)
+      ret, output = CsvWriter.run(filename, csv_objs)
+      expect(ret).to eq(filename)
+      num_rows = (csv_objs.keys.size * 2) + csv_objs.keys.sum{|key| csv_objs[key].size}
+      expect(output).to eq("Wrote #{num_rows} rows to #{filename}")
       expect(CSV.read(filename)).to eq([
         ['x', 'y'],
         ['hello', '5.40'],

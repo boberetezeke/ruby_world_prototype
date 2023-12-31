@@ -12,20 +12,20 @@ module Financial
         case command
         when :set
           errors = validate_set(args)
-          return errors if errors
+          return [nil, errors] if errors
           return set(@tags, @amount)
         when :rm
           errors = validate_rm(args)
-          return errors if errors
+          return [nil, errors] if errors
           return rm(@tags)
         when :calc
           return calc
+        when :charges
+          return charges
         when :help
-          return "                    display budget targets\n" +
-                 "set [tags] amount   set a budget target\n" +
-                 "rm  [tags]          remove budget target"
+          return help
         else
-          return "unknown sub-command: #{command}"
+          return [nil, "unknown sub-command: #{command}"]
         end
       end
     end
@@ -88,11 +88,15 @@ module Financial
       end
       budget_target.amount = amount
 
-      nil
+      [budget_target, nil]
     end
 
     def current_month
       Time.now.month
+    end
+
+    def start_of_current_month_date
+      Date.new(Time.now.year, Time.now.month, 1)
     end
 
     def find_budget_target(tags)
@@ -106,16 +110,39 @@ module Financial
     def rm(tags)
       budget_target = find_budget_target(tags)
       unless budget_target
-        return "can't find budget_target with tags: #{tags.map(&:name).join(', ')}"
+        return [nil, "can't find budget_target with tags: #{tags.map(&:name).join(', ')}"]
       end
 
       @db.rem_obj(budget_target)
 
-      nil
+      [nil, nil]
+    end
+
+    def charges
+      ret = @db.charges.select do |c|
+        c.amount < 0 && c.posted_date >= start_of_current_month_date
+      end.sort_by do |c|
+        c.posted_date
+      end.group_by do |c|
+        c.tags.map(&:name)
+      end
+
+      [ret, nil]
     end
 
     def calc
       BudgetService.new(@db).calc_amounts(Time.now.to_date)
+
+      [nil, nil]
+    end
+
+    def help
+      return [
+        nil,
+        "                    display budget targets\n" +
+          "set [tags] amount   set a budget target\n" +
+          "rm  [tags]          remove budget target",
+      ]
     end
 
     def display
@@ -123,7 +150,7 @@ module Financial
       if budget_targets.empty?
         return "No budget targets set for current month: #{current_month}"
       end
-      budget_targets.map do |budget_target|
+      output = budget_targets.map do |budget_target|
         format = "%-19s%-12s %-12s %-12s %-12s %-12s"
         format % [
           budget_target.tags.map(&:name).join(','),
@@ -134,6 +161,8 @@ module Financial
           amount_str(budget_target.week_4_amount, budget_target.week_4_calc_amount)
         ]
       end.join("\n")
+
+      [budget_targets, output]
     end
 
     def amount_str(amount, calc_amount)
@@ -145,6 +174,7 @@ module Financial
 end
 
 def budget(*args, **hargs)
-  errors = Financial::Budget.new(@db).run(*args, **hargs)
-  puts errors if errors
+  ret, output = Financial::Budget.new(@db).run(*args, **hargs)
+  puts output if output
+  ret
 end

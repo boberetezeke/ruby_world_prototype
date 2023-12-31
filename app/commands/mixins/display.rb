@@ -43,6 +43,8 @@ class Obj
             case f[:type]
             when :string
               val
+            when :integer
+              val ? f[:format] % [val] : ''
             when :float
               val ? f[:format] % [val] : ''
             when :datetime
