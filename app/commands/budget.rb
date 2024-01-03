@@ -10,24 +10,59 @@ module Financial
       else
         command = args.shift
         case command
-        when :set
-          errors = validate_set(args)
+        when :calc
+          return calc
+        when :charges
+          monthly = false
+          errors = validate_charges(*args, **hargs)
           return [nil, errors] if errors
-          return set(@tags, @amount)
+
+          monthly = true if hargs[:monthly]
+
+          return charges(monthly: monthly)
+        when :charges_by_tags
+          return charges_by_tags
+        when :help
+          return help
         when :rm
           errors = validate_rm(args)
           return [nil, errors] if errors
           return rm(@tags)
-        when :calc
-          return calc
-        when :charges
-          return charges
-        when :help
-          return help
+        when :set
+          errors = validate_set(args)
+          return [nil, errors] if errors
+          return set(@tags, @amount)
+        when :show
+          errors = validate_show(args)
+          return [nil, errors] if errors
+          return show(@tags)
         else
           return [nil, "unknown sub-command: #{command}"]
         end
       end
+    end
+
+    # ----------------- Command validators ---------------------
+    def validate_charges(*args, **hargs)
+      if !hargs.empty? && hargs.keys != [:monthly]
+        return "only monthly option is available: #{hargs}"
+      end
+      if hargs.keys == [:monthly] && !([false, true].include?(hargs[:monthly]))
+        return "monthly can only have true or false values"
+      end
+
+      nil
+    end
+
+    def validate_rm(args)
+      if args.size != 1
+        return "rm: wrong number of arguments. Got #{args.size}, expected 1"
+      end
+
+      errors = validate_tags(args[0])
+      return errors if errors
+
+      nil
     end
 
     def validate_set(args)
@@ -44,13 +79,21 @@ module Financial
       nil
     end
 
-    def validate_rm(args)
+    def validate_show(args)
       if args.size != 1
-        return "rm: wrong number of arguments. Got #{args.size}, expected 1"
+        return "set: wrong number of arguments. Got #{args.size}, expected 1"
       end
 
       errors = validate_tags(args[0])
       return errors if errors
+
+      nil
+    end
+
+    # ----------------- Validator helpers ---------------------
+    def validate_amount(amount)
+      return "amount must a positive" unless amount > 0
+      @amount = amount
 
       nil
     end
@@ -65,17 +108,61 @@ module Financial
       nil
     end
 
-    def validate_amount(amount)
-      return "amount must a positive" unless amount > 0
-      @amount = amount
+    # ----------------------- Commands ------------------------------
+    def calc
+      BudgetService.new(@db).calc_amounts(current_date)
 
-      nil
+      [nil, nil]
+    end
+
+    def charges(monthly: false)
+      ret = BudgetService.new(@db).charges(current_date, monthly: monthly)
+
+      [ret, nil]
+    end
+
+    def charges_by_tags(monthly: false)
+      ret = BudgetService.new(@db).charges_by_tags(current_date, monthly: monthly)
+
+      [ret, nil]
+    end
+
+    def display
+      budget_targets = @db.where_by(:budget_target, {date: current_date})
+      if budget_targets.empty?
+        return "No budget targets set for current month: #{current_month_start}"
+      end
+      output = budget_targets.map do |budget_target|
+        budget_target_str(budget_target)
+      end.join("\n")
+
+      [budget_targets, output]
+    end
+
+    def help
+      return [
+        nil,
+        "                    display budget targets\n" +
+          "set [tags] amount   set a budget target\n" +
+          "rm  [tags]          remove budget target",
+      ]
+    end
+
+    def rm(tags)
+      budget_target = find_budget_target(tags)
+      unless budget_target
+        return [nil, "can't find budget_target with tags: #{tags.map(&:name).join(', ')}"]
+      end
+
+      @db.rem_obj(budget_target)
+
+      [nil, nil]
     end
 
     def set(tags, amount)
       budget_target = find_budget_target(tags)
       unless budget_target
-        budget_target = Obj::BudgetTarget.new(current_month)
+        budget_target = Obj::BudgetTarget.new(current_month_start)
         @db.add_obj(budget_target)
         # TODO: this should work
         # budget_target.tags = tags
@@ -91,84 +178,84 @@ module Financial
       [budget_target, nil]
     end
 
-    def current_month
-      Time.now.month
-    end
-
-    def start_of_current_month_date
-      Date.new(Time.now.year, Time.now.month, 1)
-    end
-
-    def find_budget_target(tags)
-      budget_targets = @db.where_by(:budget_target, {month: current_month})
-      return nil unless budget_targets
-      budget_targets.find do |budget_target|
-        Obj::Tag.tags_match?(budget_target.tags, tags)
-      end
-    end
-
-    def rm(tags)
+    def show(tags, monthly: false)
       budget_target = find_budget_target(tags)
-      unless budget_target
-        return [nil, "can't find budget_target with tags: #{tags.map(&:name).join(', ')}"]
+
+      output = ''
+      if budget_target
+        output << budget_target_str(budget_target) + "\n\n"
       end
 
-      @db.rem_obj(budget_target)
-
-      [nil, nil]
-    end
-
-    def charges
-      ret = @db.charges.select do |c|
-        c.amount < 0 && c.posted_date >= start_of_current_month_date
-      end.sort_by do |c|
-        c.posted_date
-      end.group_by do |c|
-        c.tags.map(&:name)
+      charges = BudgetService.new(@db).charges(current_date, monthly: monthly)
+      output << charge_title_str + "\n"
+      charges.each do |charge|
+        output << charge_str(charge) + "\n"
       end
 
-      [ret, nil]
+      [{budget_target: budget_target, charges: charges}, output]
     end
 
-    def calc
-      BudgetService.new(@db).calc_amounts(Time.now.to_date)
-
-      [nil, nil]
-    end
-
-    def help
-      return [
-        nil,
-        "                    display budget targets\n" +
-          "set [tags] amount   set a budget target\n" +
-          "rm  [tags]          remove budget target",
-      ]
-    end
-
-    def display
-      budget_targets = @db.where_by(:budget_target, {month: current_month})
-      if budget_targets.empty?
-        return "No budget targets set for current month: #{current_month}"
-      end
-      output = budget_targets.map do |budget_target|
-        format = "%-19s%-12s %-12s %-12s %-12s %-12s"
-        format % [
-          budget_target.tags.map(&:name).join(','),
-          amount_str(budget_target.amount, budget_target.calc_amount),
-          amount_str(budget_target.week_1_amount, budget_target.week_1_calc_amount),
-          amount_str(budget_target.week_2_amount, budget_target.week_2_calc_amount),
-          amount_str(budget_target.week_3_amount, budget_target.week_3_calc_amount),
-          amount_str(budget_target.week_4_amount, budget_target.week_4_calc_amount)
-        ]
-      end.join("\n")
-
-      [budget_targets, output]
-    end
-
+    # ------------------ Utility methods --------------------------------
     def amount_str(amount, calc_amount)
       return "" if amount.nil? || amount == 0
       return "%.0f" % [amount] if calc_amount.nil?
       "%.0f(%.2f%%)" % [amount, -((100.0 * calc_amount) / amount)]
+    end
+
+    def budget_target_str(budget_target)
+      format = "%-19s%-12s %-12s %-12s %-12s %-12s"
+      format % [
+        budget_target.tags.map(&:name).join(','),
+        amount_str(budget_target.amount, budget_target.calc_amount),
+        amount_str(budget_target.week_1_amount, budget_target.week_1_calc_amount),
+        amount_str(budget_target.week_2_amount, budget_target.week_2_calc_amount),
+        amount_str(budget_target.week_3_amount, budget_target.week_3_calc_amount),
+        amount_str(budget_target.week_4_amount, budget_target.week_4_calc_amount)
+      ]
+    end
+
+    def charge_title_str
+      charge_format % charge_titles
+    end
+
+    def charge_str(charge)
+      charge_format % charge_data_lambda.call(charge)
+    end
+
+    def charge_fields
+      display = Obj::Charge.default_display
+      cols = display[:sym_sets][:default]
+      F.fields(cols, display)
+    end
+
+    def charge_format
+      F.format(charge_fields)
+    end
+
+    def charge_titles
+      F.titles(charge_fields)
+    end
+
+    def charge_data_lambda
+      F.data_lambda(charge_fields)
+    end
+
+    def current_month_start
+      now = Time.now
+      Date.new(now.year, now.month, 1)
+    end
+
+    def current_date
+      Time.now.to_date
+    end
+
+    def find_budget_target(tags)
+      budget_targets = @db.where_by(:budget_target, {date: current_month_start})
+      return nil unless budget_targets
+
+      budget_targets.find do |budget_target|
+        Obj::Tag.tags_match?(budget_target.tags, tags)
+      end
     end
   end
 end

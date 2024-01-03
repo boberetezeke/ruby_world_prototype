@@ -8,9 +8,9 @@ require_relative '../../app/objects/charge'
 require_relative '../../app/commands/financial/budget_service'
 
 describe Financial::BudgetService do
-  let(:charge_a_c_12_5) { Obj::Charge.new('abc1', 1.23, Date.new(2023,12,5)) }
-  let(:charge_a_c_12_13) { Obj::Charge.new('abc2', 2.54, Date.new(2023,12,13)) }
-  let(:charge_b_12_20) { Obj::Charge.new('abc3', 4.04, Date.new(2023,12,20)) }
+  let(:charge_a_c_12_5) { Obj::Charge.new('abc1', -1.23, Date.new(2023,12,5)) }
+  let(:charge_a_c_12_13) { Obj::Charge.new('abc2', -2.54, Date.new(2023,12,13)) }
+  let(:charge_b_12_20) { Obj::Charge.new('abc3', -4.04, Date.new(2023,12,20)) }
   let(:tag_a) { Obj::Tag.new('a')}
   let(:tag_b) { Obj::Tag.new('b')}
   let(:tag_c) { Obj::Tag.new('c')}
@@ -125,12 +125,24 @@ describe Financial::BudgetService do
     end
   end
 
+  describe "#charges" do
+    it 'returns charges for the month with monthly: true' do
+      charges = subject.charges(Date.new(2023,12,1), monthly: true)
+      expect(charges).to match_array([charge_a_c_12_5, charge_a_c_12_13, charge_b_12_20])
+    end
+
+    it 'returns the week charges with monthly: false' do
+      charges = subject.charges(Date.new(2023,12,4), monthly: false)
+      expect(charges).to match_array([charge_a_c_12_5])
+    end
+  end
+
   describe '#calc_amounts' do
     it 'calcs amounts correctly for budget_target_a_c' do
       subject.calc_amounts_for_budget_target(Date.new(2023,12,1), budget_target_a_c)
-      expect(budget_target_a_c.calc_amount).to eq(3.77)
-      expect(budget_target_a_c.week_1_calc_amount).to eq(1.23)
-      expect(budget_target_a_c.week_2_calc_amount).to eq(2.54)
+      expect(budget_target_a_c.calc_amount).to eq(-3.77)
+      expect(budget_target_a_c.week_1_calc_amount).to eq(-1.23)
+      expect(budget_target_a_c.week_2_calc_amount).to eq(-2.54)
       expect(budget_target_a_c.week_3_calc_amount).to eq(0.00)
       expect(budget_target_a_c.week_4_calc_amount).to eq(0.00)
     end
@@ -142,10 +154,10 @@ describe Financial::BudgetService do
       expect(budget_target_b.week_2_amount).to eq(7.00)
       expect(budget_target_b.week_3_amount).to eq(7.00)
       expect(budget_target_b.week_4_amount).to eq(7.00)
-      expect(budget_target_b.calc_amount).to eq(4.04)
+      expect(budget_target_b.calc_amount).to eq(-4.04)
       expect(budget_target_b.week_1_calc_amount).to eq(0.00)
       expect(budget_target_b.week_2_calc_amount).to eq(0.00)
-      expect(budget_target_b.week_3_calc_amount).to eq(4.04)
+      expect(budget_target_b.week_3_calc_amount).to eq(-4.04)
       expect(budget_target_b.week_4_calc_amount).to eq(0.00)
     end
   end

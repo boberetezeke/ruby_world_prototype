@@ -53,6 +53,39 @@ module Financial
       Time.now.month
     end
 
+    def self.start_of_month_date(date)
+      Date.new(date.year, date.month, 1)
+    end
+
+    def self.end_of_month_date(date)
+      Date.new(date.year, date.month, self.days_in_month(date))
+    end
+
+    def charges(date, monthly: false)
+      if monthly
+        date_range = (
+          self.class.start_of_month_date(date)..self.class.end_of_month_date(date)
+        )
+      else
+        weeks = self.class.weeks_in_month(date)
+        date_range = weeks.find{ |_, date_range|
+          date_range.include?(date)
+        }[1]
+      end
+
+      @db.charges.select do |c|
+        c.amount < 0 && date_range.include?(c.posted_date)
+      end.sort_by do |c|
+        c.posted_date
+      end
+    end
+
+    def charges_by_tags(date, monthly: false)
+      charges(date, monthly: monthly).group_by do |c|
+        c.tags.map(&:name)
+      end
+    end
+
     def calc_amounts(date)
       @db.budget_targets.select{ |bt| bt.month == current_month }.each do |budget_target|
         calc_amounts_for_budget_target(date, budget_target)

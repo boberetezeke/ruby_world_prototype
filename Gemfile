@@ -7,3 +7,4 @@ gem 'kimurai', path: "../kimuraframework"
 gem 'nokogiri'
 gem 'pry'
 gem 'slop'
+gem 'timecop'

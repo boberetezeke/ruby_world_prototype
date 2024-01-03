@@ -4,11 +4,11 @@ class Obj::BudgetTarget < Obj
   def self.default_display
     {
       sym_sets: {
-        default: [:month, :amount, :calc_amount]
+        default: [:month_start_date, :amount, :calc_amount]
       },
       fields: {
         id: { width: 35, type: :string, title: 'ID' },
-        month: { width: 35, type: :integer, title: 'month', format: '%d' },
+        month_start_date: { width: 15, type: :date, title: 'date' },
         amount: { width: 15, type: :float, title: 'amount', format: '%.2f' },
         week_1_amount: { width: 15, type: :float, title: 'week_1_amount', format: '%.2f' },
         week_2_amount: { width: 15, type: :float, title: 'week_2_amount', format: '%.2f' },
@@ -23,7 +23,7 @@ class Obj::BudgetTarget < Obj
     }
   end
 
-  def initialize(month,
+  def initialize(month_start_date,
                  amount: nil,
                  week_1_amount: nil,
                  week_2_amount: nil,
@@ -35,7 +35,7 @@ class Obj::BudgetTarget < Obj
                  week_3_calc_amount: nil,
                  week_4_calc_amount: nil)
     super(:budget_target, {
-      month: month,
+      month_start_date: month_start_date,
       amount: amount,
       week_1_amount: week_1_amount,
       week_2_amount: week_2_amount,
