@@ -8,8 +8,7 @@ class CsvWriter
     csv_writer = new(filename)
 
     if objs.empty?
-      puts "no objects to display"
-      return
+      return [filename, "no objects to display"]
     end
 
     if objs.is_a?(Hash)
@@ -17,21 +16,24 @@ class CsvWriter
         v.map{|o| o.class.to_s}.uniq
       end.uniq
       if group_by_obj_types.size != 1
-        puts "all grouped by types must be the same"
+        return [filename, "all grouped by types must be the same"]
       else
-        csv_writer.write_grouped_objs(objs, cols)
+        num_rows = csv_writer.write_grouped_objs(objs, cols)
       end
     elsif objs.is_a?(Array)
       obj_types = objs.map{|o| o.class.to_s}.uniq
       if obj_types.size == 1
-        csv_writer.write_objs(objs, cols)
+        num_rows = csv_writer.write_objs(objs, cols)
       else
-        puts "all objects must be of the same type: #{obj_types}"
+        return [filename, "all objects must be of the same type: #{obj_types}"]
       end
     else
-      puts "must be either an array or a hash of arrays"
+      return [filename, "must be either an array or a hash of arrays"]
     end
+
+    return [filename, "Wrote #{num_rows} rows to #{filename}"]
   end
+
   def initialize(filename)
     @filename = filename
   end
@@ -54,6 +56,8 @@ class CsvWriter
         write_empty_row(csv)
       end
     end
+
+    (grouped_objs.keys.size * 2) + grouped_objs.keys.sum{ |key| grouped_objs[key].size }
   end
 
   def write_objs(objs, cols)
@@ -61,6 +65,8 @@ class CsvWriter
     CSV.open(@filename, "wb") do |csv|
       write_header_and_rows(csv, objs, titles, data_lambda)
     end
+
+    objs.size
   end
 
   def write_header_and_rows(csv, objs, titles, data_lambda)
@@ -97,5 +103,7 @@ class CsvWriter
 end
 
 def csv(filename, objs, *args, **hargs)
-  CsvWriter.run(filename, objs, *args, **hargs)
+  ret, output = CsvWriter.run(filename, objs, *args, **hargs)
+  puts output if output
+  ret
 end
