@@ -1,5 +1,6 @@
 require_relative '../../app/objects/obj'
 require_relative '../../app/objects/database'
+require_relative '../../app/objects/database_adapter/in_memory'
 require_relative '../../app/migrations'
 require 'yaml'
 
@@ -20,57 +21,6 @@ end
 describe Obj::Database do
   subject { Obj::Database.new }
 
-  describe '#serialize' do
-    it 'writes the database to disk' do
-      hash = subject.serialize
-      expect(hash[:version]).to eq(Obj::Database.current_version)
-    end
-  end
-
-  describe '#deserialize' do
-    it 'writes the database to disk' do
-      subject.deserialize({ objs: [], version: Obj::Database.current_version })
-      expect(subject.objs).to eq([])
-    end
-  end
-
-  describe '#write' do
-    it 'writes the database to disk' do
-      # a = A.new(1, 2)
-      # b = B.new(3)
-      # b.a = b
-      # subject.add_obj(a)
-      # subject.add_obj(b)
-      #
-      subject.write
-      yaml = YAML.load(File.read('db.yml'))
-      expect(yaml[:version]).to eq(Obj::Database.current_version)
-      #
-      # a_yaml = YAML.load(File.read("a/#{a.id}.yml"))
-      # expect(a_yaml[:attrs][:x]).to eq(1)
-      # expect(a_yaml[:attrs][:y]).to eq(2)
-      #
-      # b_yaml = YAML.load(File.read("b/#{b.id}.yml"))
-      # expect(b_yaml[:attrs][:z]).to eq(3)
-    end
-  end
-
-  describe '.read' do
-    it 'reads the database file and deserializes it' do
-      yml = {
-        version: Obj::Database.current_version,
-        objs: {},
-        tags: [],
-        classes: {},
-        migrations_applied: []
-      }
-      File.open('db.yml', 'w') {|f| f.write(yml.to_yaml) }
-      database = described_class.read
-
-      expect(database.version_read).to eq(Obj::Database.current_version)
-    end
-  end
-
   context 'when loading after save' do
     it 'load and save' do
       a = A.new(1,2)
@@ -80,8 +30,8 @@ describe Obj::Database do
       subject.add_obj(a)
       subject.add_obj(b)
 
-      subject.write
-      database = Obj::Database.read
+      subject.save
+      database = described_class.load_or_reload(nil)
 
       a2 = database.objs[:a].values.first
 

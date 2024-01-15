@@ -163,9 +163,14 @@ class Obj
     end
   end
 
+  def simple_assign(sym, rhs)
+    @attrs[sym] = rhs
+    true
+  end
+
   def attr_assign(sym, rhs)
     if attrs_and_defaults.keys.include?(sym)
-      return @attrs[sym] = rhs
+      return simple_assign(sym, rhs)
     elsif relationships.include?(sym)
       rel = relationships[sym]
       if rel.rel_type == :belongs_to
@@ -213,6 +218,10 @@ class Obj
       return [complete, ret_value] if complete
     end
     return [false, nil]
+  end
+
+  def save(db)
+    @db.save(self)
   end
 
   def method_missing(sym, *args)
