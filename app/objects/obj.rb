@@ -8,7 +8,7 @@ load "#{path}/obj/has_many_array.rb"
 load "#{path}/obj/relationship.rb"
 
 class Obj
-  attr_reader :id, :type_sym, :attrs, :changes
+  attr_reader :id, :type_sym, :attrs, :changes, :db
 
   def initialize(type_sym, attrs)
     reset(type_sym, SecureRandom.hex, attrs)
@@ -57,7 +57,13 @@ class Obj
   end
 
   def ==(other)
-    other.id == @id
+    if (other.db.nil? && !@db.nil?) || (!other.db.nil? && @db.nil?)
+      return false
+    elsif other.db && @db
+      other.id == @id
+    else
+      other.attrs == @attrs
+    end
   end
 
   def hash

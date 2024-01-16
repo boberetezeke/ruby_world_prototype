@@ -18,6 +18,10 @@ class Obj::Changes
     end
   end
 
+  def for_sym(sym)
+    @changes[sym]
+  end
+
   def empty?
     @changes.empty?
   end

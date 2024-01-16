@@ -1,4 +1,6 @@
 require_relative '../../app/objects/obj'
+require_relative '../../app/objects/obj/change'
+require_relative '../../app/objects/obj/changes'
 
 class A < Obj
   has_many :bs, :b, :a_id, inverse_of: :a
@@ -199,7 +201,7 @@ describe Obj do
       context 'polymorphic belongs tos' do
         it 'gets both objects from D1 to D2 with assigning to d1, d2' do
           c1 = C.new(1)
-          c2 = C.new(1)
+          c2 = C.new(2)
           d = D1.new(2)
 
           d.cs = [c1, c2]
@@ -209,7 +211,7 @@ describe Obj do
 
         it 'gets both objects from D1 to D2 when assigning to c' do
           c1 = C.new(1)
-          c2 = C.new(1)
+          c2 = C.new(2)
           d = D1.new(2)
 
           c1.dable = d
