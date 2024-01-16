@@ -114,6 +114,7 @@ class Obj
 
       def write
         File.open(self.class.db_path, "w") {|f| f.write(serialize.to_yaml) }
+        @changes = []
       end
 
       def add_obj(obj)
@@ -121,6 +122,8 @@ class Obj
         @classes[obj.type_sym] = class_name
         objs_of_type = @objs[obj.type_sym] || {}
         @objs[obj.type_sym] = objs_of_type if @objs[obj.type_sym].nil?
+        @changes.push({change_type: :add_obj, obj: obj})
+        obj.added_to_db(self)
 
         objs_of_type[obj.id] = obj
         obj
@@ -130,6 +133,11 @@ class Obj
         objs_of_type = @objs[obj.type_sym] || {}
         objs_of_type.delete(obj.id)
         obj
+      end
+
+      def update_obj(obj)
+        return if obj.changes.empty?
+        @changes.push({change_type: :update_obj, obj: obj})
       end
 
       def find_by(type_sym, finder_hash)

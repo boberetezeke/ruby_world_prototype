@@ -8,16 +8,21 @@ load "#{path}/obj/has_many_array.rb"
 load "#{path}/obj/relationship.rb"
 
 class Obj
-  attr_reader :id, :type_sym, :attrs
+  attr_reader :id, :type_sym, :attrs, :changes
 
   def initialize(type_sym, attrs)
     reset(type_sym, SecureRandom.hex, attrs)
+  end
+
+  def added_to_db(db)
+    @db = db
   end
 
   def reset(type_sym, id, attrs)
     @type_sym = type_sym
     @id = id
     @attrs = default_belongs_to_attrs.merge(attrs)
+    @changes = Obj::Changes.new
 
     self.class.objects[@id] = self
     self.class.classes[type_sym] = self.class
@@ -164,6 +169,7 @@ class Obj
   end
 
   def simple_assign(sym, rhs)
+    @changes.add(Obj::Change.new(sym, @attrs[sym], rhs))
     @attrs[sym] = rhs
     true
   end
@@ -220,8 +226,8 @@ class Obj
     return [false, nil]
   end
 
-  def save(db)
-    @db.save(self)
+  def save
+    @db.update_obj(self)
   end
 
   def method_missing(sym, *args)

@@ -42,6 +42,10 @@ class Obj::Database
     @database_adapter.rem_obj(obj)
   end
 
+  def update_obj(obj)
+    @database_adapter.save_obj(obj)
+  end
+
   def find_by(type_sym, finder_hash)
     @database_adapter.find_by(type_sym, finder_hash)
   end

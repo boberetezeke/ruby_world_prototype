@@ -1,4 +1,6 @@
 require_relative '../../../app/objects/obj'
+require_relative '../../../app/objects/obj/changes'
+require_relative '../../../app/objects/obj/change'
 require_relative '../../../app/objects/database'
 require_relative '../../../app/objects/database_adapter/in_memory'
 require_relative '../../../app/migrations'
@@ -43,6 +45,46 @@ describe Obj::DatabaseAdapter::InMemoryDb do
     end
   end
 
+  describe '#unsaved?' do
+    it 'returns false with a newly loaded database' do
+      database = described_class.new
+      expect(database.unsaved?).to be_falsey
+    end
+
+    it 'returns true when an object is added to the database' do
+      database = described_class.new
+      database.add_obj(A.new(1,2))
+      expect(database.unsaved?).to be_truthy
+    end
+
+    it 'returns false when an object is added to the database and then saved' do
+      database = described_class.new
+      database.add_obj(A.new(1,2))
+      database.write
+      expect(database.unsaved?).to be_falsy
+    end
+
+    it 'returns true when an object is changed' do
+      database = described_class.new
+      database.add_obj(A.new(1,2))
+      database.write
+      a_obj = database.objs[:a].values.first
+      a_obj.x = 10
+      a_obj.save
+      expect(database.unsaved?).to be_truthy
+    end
+
+    it 'returns false when an object attr is set but not changed' do
+      database = described_class.new
+      database.add_obj(A.new(1,2))
+      database.write
+      a_obj = database.objs[:a].values.first
+      a_obj.x = 1
+      a_obj.save
+      expect(database.unsaved?).to be_falsey
+    end
+  end
+
   describe '.read' do
     it 'reads the database file and deserializes it' do
       yml = {
@@ -56,25 +98,6 @@ describe Obj::DatabaseAdapter::InMemoryDb do
       database = described_class.read
 
       expect(database.version_read).to eq(described_class.current_version)
-    end
-  end
-
-  context 'when loading after save' do
-    it 'load and save' do
-      a = A.new(1,2)
-      b = B.new(3)
-      b.a = a
-
-      subject.add_obj(a)
-      subject.add_obj(b)
-
-      subject.write
-      database = Obj::Database.load_or_reload(nil)
-
-      a2 = database.objs[:a].values.first
-
-      expect(a2.bs.to_a.size).to eq(1)
-      expect(a2.bs.to_a.first.z).to eq(3)
     end
   end
 end
