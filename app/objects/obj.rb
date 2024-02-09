@@ -10,19 +10,24 @@ load "#{path}/obj/relationship.rb"
 class Obj
   attr_reader :id, :type_sym, :attrs, :changes, :db
 
-  def initialize(type_sym, attrs)
-    reset(type_sym, SecureRandom.hex, attrs)
+  def initialize(type_sym, attrs, track_changes: true)
+    reset(type_sym, SecureRandom.hex, attrs, track_changes: track_changes)
   end
 
   def added_to_db(db)
     @db = db
   end
 
-  def reset(type_sym, id, attrs)
+  def reset(type_sym, id, attrs, track_changes: true)
     @type_sym = type_sym
     @id = id
     @attrs = default_belongs_to_attrs.merge(attrs)
     @changes = Obj::Changes.new
+    if track_changes
+      @attrs.each do |attr, value|
+        @changes.add(Obj::Change.new(attr, nil, value))
+      end
+    end
 
     self.class.objects[@id] = self
     self.class.classes[type_sym] = self.class
@@ -158,6 +163,8 @@ class Obj
   def belongs_to_assign(rel, rhs)
     old_val = @attrs[rel.foreign_key]
     new_val = rhs&.id
+    foreign_key = rel.foreign_key
+    @changes.add(Obj::Change.new(foreign_key, @attrs[foreign_key], new_val))
     @attrs[rel.foreign_key] = new_val
     @attrs[rel.foreign_type] = rhs.type_sym if rel.polymorphic && !rhs.nil?
     rel.inverse(self).index.update(old_val, new_val, self)

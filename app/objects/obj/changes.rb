@@ -25,4 +25,10 @@ class Obj::Changes
   def empty?
     @changes.empty?
   end
+
+  def ==(other)
+    return false unless other.is_a?(self.class)
+
+    @changes.to_a.all?{ |k, v| other.for_sym(k) == v}
+  end
 end

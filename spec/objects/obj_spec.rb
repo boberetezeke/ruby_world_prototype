@@ -97,6 +97,12 @@ describe Obj do
       expect(a.y).to eq(2)
     end
 
+    it 'records changes of initialization' do
+      a = A.new(1,2)
+      expect(a.changes.for_sym(:x)).to eq(Obj::Change.new(:x, nil, 1))
+      expect(a.changes.for_sym(:y)).to eq(Obj::Change.new(:y, nil, 2))
+    end
+
     it 'can assign and retrieve attributes' do
       a = A.new(1,2)
       a.x = 3
@@ -110,15 +116,28 @@ describe Obj do
       a2 = a1.dup
       expect(a1.attrs).to eq(a2.attrs)
     end
+
+    it 'copies the changes history over' do
+      a1 = A.new(1,2)
+      a2 = a1.dup
+      expect(a1.changes).to eq(a2.changes)
+    end
   end
 
   context 'relationships' do
     context 'belongs_to' do
+      before do
+        @a = A.new(1,2)
+        @b = B.new(3)
+        @b.a = @a
+      end
+
       it 'assigns and retrieves a belongs_to relationship' do
-        a = A.new(1,2)
-        b = B.new(3)
-        b.a = a
-        expect(b.a).to eq(a)
+        expect(@b.a).to eq(@a)
+      end
+
+      it 'creates a change' do
+        expect(@b.changes.for_sym(:a_id)).to eq(Obj::Change.new(:a_id, nil, @a.id))
       end
     end
 
@@ -140,37 +159,89 @@ describe Obj do
       end
 
       context 'when assigning on the has_many side' do
-        it 'assigns and retrieves a has_many relationship' do
-          a = A.new(1,2)
-          b = B.new(3)
-          a.bs = [b]
-          expect(a.bs.to_a).to eq([b])
+        context 'when assigning and retrieving a has_many relationship' do
+          before do
+            @a = A.new(1,2)
+            @b = B.new(3)
+            @a.bs = [@b]
+          end
+
+          it 'assigns and retrieves a has_many relationship' do
+            expect(@a.bs.to_a).to eq([@b])
+          end
+
+          it 'creates a change on the b object' do
+            expect(@b.changes.for_sym(:a_id)).to eq(Obj::Change.new(:a_id, nil, @a.id))
+          end
         end
 
-        it 'works when using a push' do
-          a = A.new(1,2)
-          b = B.new(3)
-          a.bs.push(b)
-          expect(a.bs).to eq([b])
+        context 'when assigning using push' do
+          before do
+            @a = A.new(1,2)
+            @b = B.new(3)
+            @a.bs.push(@b)
+          end
+
+          it 'assigns it correctly' do
+            expect(@a.bs).to eq([@b])
+          end
+
+          # La eferia prado - March
+          it 'creates a change on the b object' do
+            expect(@b.changes.for_sym(:a_id)).to eq(Obj::Change.new(:a_id, nil, @a.id))
+          end
         end
 
-        it 'works when using a <<' do
-          a = A.new(1,2)
-          b = B.new(3)
-          a.bs << b
-          expect(a.bs).to eq([b])
+        context 'when using a <<' do
+          before do
+            @a = A.new(1,2)
+            @b = B.new(3)
+            @a.bs << @b
+          end
+
+          it 'assigns it correctly' do
+            expect(@a.bs).to eq([@b])
+          end
+
+          it 'creates a change on the b object' do
+            expect(@b.changes.for_sym(:a_id)).to eq(Obj::Change.new(:a_id, nil, @a.id))
+          end
         end
 
-        it 'works when using delete' do
-          a = A.new(1,2)
-          b1 = B.new(3)
-          b2 = B.new(4)
+        context 'when using assign has many then, delete' do
+          before do
+            @a = A.new(1,2)
+            @b1 = B.new(3)
+            @b2 = B.new(4)
+            @a.bs = [@b1, @b2]
+          end
 
-          a.bs = [b1, b2]
-          expect(a.bs).to match_array([b1, b2])
+          it 'has two array members' do
+            expect(@a.bs).to match_array([@b1, @b2])
+          end
 
-          a.bs.delete(b1)
-          expect(a.bs).to eq([b2])
+          it 'creates a change on the b1 object' do
+            expect(@b1.changes.for_sym(:a_id)).to eq(Obj::Change.new(:a_id, nil, @a.id))
+          end
+
+          it 'creates a change on the b2 object' do
+            expect(@b2.changes.for_sym(:a_id)).to eq(Obj::Change.new(:a_id, nil, @a.id))
+          end
+
+          context 'when using delete' do
+            before do
+              @a.bs.delete(@b1)
+            end
+
+            it 'removes the one entry being deleted' do
+              expect(@a.bs).to eq([@b2])
+            end
+
+            it 'creates a change on the b2 object' do
+              expect(@b2.changes.for_sym(:a_id)).to be_nil
+            end
+          end
+
         end
 
         it 'transfers from one owner to another if added to other owner' do
