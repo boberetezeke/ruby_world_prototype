@@ -18,6 +18,10 @@ class Obj::Database
     @database_adapter = self.class.database_adapter.new
   end
 
+  def create_table(*args)
+    @database_adapter.create_table(*args)
+  end
+
   def tag_context
     @tag_context
   end
