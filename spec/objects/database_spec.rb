@@ -23,13 +23,13 @@ end
 
 class CreateA
   def self.up(database)
-    database.create_table(:a, {x: :string, y: string})
+    database.create_table(:a, {x: :string, y: :string})
   end
 end
 
 class CreateB
   def self.up(database)
-    database.create_table(:b, {z: :string})
+    database.create_table(:b, {z: :string, a_id: :integer})
   end
 end
 
@@ -63,6 +63,7 @@ describe Obj::Database do
 
   context 'when using in sqlite database' do
     before do
+      File.unlink(Obj::DatabaseAdapter::SqliteDb.db_filename) rescue nil
       allow(Obj::Database).to receive(:database_adapter).and_return(Obj::DatabaseAdapter::SqliteDb)
       Obj::Database.migrate([CreateA, CreateB], subject)
     end

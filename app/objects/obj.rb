@@ -133,6 +133,12 @@ class Obj
     @indexes
   end
 
+  def self.new_from_db(type_sym, attrs)
+    obj = @@classes[type_sym].allocate
+    obj.reset(type_sym, SecureRandom.hex, attrs)
+    obj
+  end
+
   def update_indexes(obj)
     relationships.each do |_, rel|
       if rel.rel_type == :belongs_to && rel.inverse_of

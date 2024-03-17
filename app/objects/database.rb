@@ -9,6 +9,10 @@ class Obj::Database
     database_adapter.migrate(all_migrations, database)
   end
 
+  def self.create_table(table_name, attrs_and_types)
+    database_adapter.create_table(table_name, attrs_and_types)
+  end
+
   def self.load_or_reload(database)
     database_adapter.load_or_reload(database)
   end
