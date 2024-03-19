@@ -68,6 +68,21 @@ describe Obj::Database do
       Obj::Database.migrate([CreateA, CreateB], subject)
     end
 
+    #
+    # class SequelA < Sequel::Model(:a)
+    #   one_to_many :sequel_bs, key: :a_id
+    # end
+    # class SequelB < Sequel::Model(:b)
+    #   many_to_one :sequel_a, key: :a_id
+    # end
+    # SequelA.all.first.sequel_bs
+    # SequelB.all.first.sequel_a
+    #
+    # like a relation, append _dataset
+    #
+    # SequelA.all.first.sequel_bs_dataset.where(z: '3').to_a
+    #
+
     context 'when loading after save' do
       it 'load and save' do
         a = A.new(1,2)
