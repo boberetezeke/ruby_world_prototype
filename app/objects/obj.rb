@@ -3,6 +3,11 @@ require 'securerandom'
 
 path = File.dirname(__FILE__)
 
+class Obj
+  module DatabaseAdapter
+  end
+end
+
 load "#{path}/obj/index.rb"
 load "#{path}/obj/has_many_array.rb"
 load "#{path}/obj/relationship.rb"
@@ -13,7 +18,6 @@ class Obj
 
   def initialize(type_sym, attrs, track_changes: true)
     reset(type_sym, SecureRandom.hex, attrs, track_changes: track_changes)
-    @rel_adapter = Obj::DatabaseAdapter::InMemoryRelationship.new
   end
 
   def added_to_db(db)
@@ -23,6 +27,7 @@ class Obj
   end
 
   def reset(type_sym, id, attrs, track_changes: true)
+    @rel_adapter = Obj::DatabaseAdapter::InMemoryRelationship.new(self)
     @type_sym = type_sym
     @id = id
     @attrs = default_belongs_to_attrs.merge(attrs)
@@ -77,6 +82,14 @@ class Obj
 
   def hash
     @id
+  end
+
+  def self.type_sym(sym)
+    @type_sym = sym
+  end
+
+  def self.get_type_sym
+    @type_sym
   end
 
   def self.belongs_to(rel_name, foreign_key, inverse_of: nil, polymorphic: nil)
@@ -195,7 +208,7 @@ class Obj
   def relationship_read(sym)
     rel = relationships[sym]
     if rel.rel_type == :belongs_to
-      return [true, @rel_adapter.belongs_to_relationship_read(rel)]
+      return [true, @rel_adapter.belongs_to_read(rel)]
     elsif rel.rel_type == :has_many
       if rel.through
         return [true, @rel_adapter.has_many_through_read(rel)]

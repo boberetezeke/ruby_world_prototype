@@ -1,8 +1,8 @@
 path = File.dirname(__FILE__)
 
 load "#{path}/objects/obj.rb"
-load "#{path}/objects/change.rb"
-load "#{path}/objects/changes.rb"
+load "#{path}/objects/obj/change.rb"
+load "#{path}/objects/obj/changes.rb"
 load "#{path}/objects/store.rb"
 load "#{path}/objects/collection.rb"
 

@@ -71,6 +71,9 @@ class Obj
         @changes = []
       end
 
+      def register_class(obj_class)
+      end
+
       def unsaved?
         !@changes.empty?
       end

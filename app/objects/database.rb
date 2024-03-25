@@ -17,9 +17,17 @@ class Obj::Database
     database_adapter.load_or_reload(database)
   end
 
+  def self.read
+    database_adapter.read
+  end
+
   def initialize
     @tag_context = 'tag'
     @database_adapter = self.class.database_adapter.new
+  end
+
+  def register_class(obj_class)
+    @database_adapter.register_class(obj_class)
   end
 
   def create_table(*args)

@@ -87,15 +87,18 @@ describe Obj::Database do
       it 'load and save' do
         a = A.new(1,2)
         b = B.new(3)
+
+        database.register_class(A)
+        database.register_class(B)
+
         b.a = a
 
         subject.add_obj(a)
         subject.add_obj(b)
 
         subject.save
-        database = described_class.load_or_reload(nil)
 
-        a2 = database.objs[:a].values.first
+        a2 = subject.find_by(:a, {id: a.id})
 
         expect(a2.bs.to_a.size).to eq(1)
         expect(a2.bs.to_a.first.z).to eq(3)

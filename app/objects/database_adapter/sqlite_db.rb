@@ -47,6 +47,8 @@ class Obj
 
       def initialize
         @db = Sequel.connect("sqlite://#{self.class.db_filename}")
+        @type_sym_to_sequel_class[obj_class.type_sym] = {}
+        @sequel_class_to_type_sym[sequel_class.to_s] = {}
       end
 
       def create_table(table_name, columns)
@@ -96,7 +98,7 @@ class Obj
       end
 
       def table(name)
-        Relation.new(name)
+        Relation.new(@db, name)
       end
 
       def add_obj(obj)
@@ -110,6 +112,42 @@ class Obj
       end
 
       def find_by(type_sym, finder_hash)
+        klass = type_sym_to_sequel_class(type_sym)
+        objs = klass.where(finder_hash)
+        objs.map { |obj| wrap_obj(obj) }
+      end
+
+      def register_class(obj_class)
+        sequel_class = create_sequel_class(obj_class)
+        @type_sym_to_sequel_class[obj_class.type_sym] = sequel_class
+        @sequel_class_to_type_sym[sequel_class.to_s] = obj_class.type_sym
+      end
+
+      def create_sequel_class(klass)
+        eval(sequel_class_str(klass))
+      end
+
+      def sequel_class_str(klass)
+        s = klass.to_s.split(/::/)
+        class_name = "Sequel#{s[1]}"
+        rels = klass.relationships.map do |rel|
+          case rel.rel_type
+          when :belongs_to
+            "many_to_one :sequel_#{rel.name}, :#{rel.foreign_key}"
+          when :has_many
+            "one_to_many :sequel_#{rel.name}, :#{rel.foreign_key}"
+          end
+        end
+
+        "class " + class_name + ";" + rels.join(";") + "end"
+      end
+
+      def type_sym_to_sequel_class(type_sym)
+        @classes[type_sym]
+      end
+
+      def wrap_obj(sequel_obj)
+        Obj.classes[obj.type_sym].allocate
       end
 
       def get_objs(sym)
