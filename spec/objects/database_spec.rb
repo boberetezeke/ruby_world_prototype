@@ -7,14 +7,16 @@ require_relative '../../app/objects/database_adapter/sqlite_db'
 require_relative '../../app/migrations'
 require 'yaml'
 
-class A < Obj
+class Obj::A < Obj
+  type_sym :a
   has_many :bs, :b, :a_id, inverse_of: :a
   def initialize(x, y)
     super(:a, {x: x, y: y})
   end
 end
 
-class B < Obj
+class Obj::B < Obj
+  type_sym :b
   belongs_to :a, :a_id, inverse_of: :bs
   def initialize(z)
     super(:b, {z: z})
@@ -43,8 +45,8 @@ describe Obj::Database do
 
     context 'when loading after save' do
       it 'load and save' do
-        a = A.new(1,2)
-        b = B.new(3)
+        a = Obj::A.new(1,2)
+        b = Obj::B.new(3)
         b.a = a
 
         subject.add_obj(a)
@@ -85,11 +87,11 @@ describe Obj::Database do
 
     context 'when loading after save' do
       it 'load and save' do
-        a = A.new(1,2)
-        b = B.new(3)
+        a = Obj::A.new(1,2)
+        b = Obj::B.new(3)
 
-        database.register_class(A)
-        database.register_class(B)
+        subject.register_class(Obj::A)
+        subject.register_class(Obj::B)
 
         b.a = a
 
