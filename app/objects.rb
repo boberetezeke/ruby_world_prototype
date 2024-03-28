@@ -1,10 +1,13 @@
 path = File.dirname(__FILE__)
 
 load "#{path}/objects/obj.rb"
+load "#{path}/objects/obj/change.rb"
+load "#{path}/objects/obj/changes.rb"
 load "#{path}/objects/store.rb"
 load "#{path}/objects/collection.rb"
 
 load "#{path}/objects/database.rb"
+load "#{path}/objects/database_adapter/in_memory.rb"
 load "#{path}/objects/tag.rb"
 
 load "#{path}/objects/call.rb"

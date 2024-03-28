@@ -1,5 +1,8 @@
 require_relative '../../app/objects/obj'
+require_relative '../../app/objects/obj/change'
+require_relative '../../app/objects/obj/changes'
 require_relative '../../app/objects/database'
+require_relative '../../app/objects/database_adapter/in_memory'
 require_relative '../../app/objects/store'
 
 require_relative '../../app/objects/tag'
