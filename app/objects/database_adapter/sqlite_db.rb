@@ -102,8 +102,8 @@ class Obj
       end
 
       def add_obj(obj)
-        r = obj_table(obj).insert(obj.attrs)
-        r
+        sequel_klass = @type_sym_to_sequel_class[obj.type_sym]
+        sequel_klass.create(obj.attrs)
       end
 
       def rem_obj(obj)
@@ -113,20 +113,22 @@ class Obj
       end
 
       def find_by(type_sym, finder_hash)
-        klass = type_sym_to_sequel_class(type_sym)
+        klass = @type_sym_to_sequel_class[type_sym]
         objs = klass.where(finder_hash)
         objs.map { |obj| wrap_obj(obj) }
       end
 
       def register_class(obj_class)
         sequel_class = create_sequel_class(obj_class)
-        @type_sym_to_sequel_class[obj_class.type_sym] = sequel_class
-        @sequel_class_to_type_sym[sequel_class.to_s] = obj_class.type_sym
+        @type_sym_to_sequel_class[obj_class.get_type_sym] = sequel_class
+        @sequel_class_to_type_sym[sequel_class.to_s] = obj_class.get_type_sym
       end
 
       def create_sequel_class(klass)
-        str = sequel_class_str(klass)
+        str, class_name = sequel_class_str(klass)
         eval(str)
+        r = eval(class_name)
+        r
       end
 
       def sequel_class_str(klass)
@@ -142,7 +144,10 @@ class Obj
           end
         end
 
-        "class " + class_name + " < Sequel::Model(:#{type_sym});" + rels.join(";") + ";end"
+        [
+          "class " + class_name + " < Sequel::Model(:#{type_sym});" + rels.join(";") + ";end",
+          class_name
+        ]
       end
 
       def type_sym_to_sequel_class(type_sym)
