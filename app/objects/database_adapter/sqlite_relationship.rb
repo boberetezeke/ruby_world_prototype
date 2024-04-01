@@ -1,10 +1,11 @@
 class Obj::DatabaseAdapter::SqliteRelationship
-  def initialize(obj)
+  def initialize(obj, sequel_adapter)
     @obj = obj
+    @sequel_adapter = sequel_adapter
   end
 
   def belongs_to_read(rel)
-
+    puts 'here'
     # id = @attrs[rel.foreign_key]
     # id.nil? ? nil : @obj.class.objects[id]
   end
@@ -21,7 +22,8 @@ class Obj::DatabaseAdapter::SqliteRelationship
   end
 
   def has_many_read(rel)
-    # HasManyArray.new(@obj, rel, rel.index[@obj.id])
+    sequel_objs = @obj.db_obj.send("sequel_#{rel.name}")
+    sequel_objs.map{ |sequel_obj| @sequel_adapter.wrap_obj(sequel_obj, @obj.type_sym) }
   end
 
   def has_many_through_read(rel)

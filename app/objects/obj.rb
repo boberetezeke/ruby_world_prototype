@@ -15,9 +15,14 @@ load "#{path}/database_adapter/in_memory_relationship.rb"
 
 class Obj
   attr_reader :id, :type_sym, :attrs, :changes, :db
+  attr_accessor :db_obj
 
   def initialize(type_sym, attrs, track_changes: true)
     reset(type_sym, SecureRandom.hex, attrs, track_changes: track_changes)
+  end
+
+  def db_id
+    @db_obj&.id
   end
 
   def added_to_db(db)
@@ -26,8 +31,8 @@ class Obj
     # @rel_adapter = Obj::DatabaseAdapter::InMemoryRelationship.new
   end
 
-  def reset(type_sym, id, attrs, track_changes: true)
-    @rel_adapter = Obj::DatabaseAdapter::InMemoryRelationship.new(self)
+  def reset(type_sym, id, attrs, track_changes: true, rel_adapter: Obj::DatabaseAdapter::InMemoryRelationship.new(self))
+    @rel_adapter = rel_adapter
     @type_sym = type_sym
     @id = id
     @attrs = default_belongs_to_attrs.merge(attrs)

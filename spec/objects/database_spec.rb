@@ -4,6 +4,7 @@ require_relative '../../app/objects/obj/change'
 require_relative '../../app/objects/database'
 require_relative '../../app/objects/database_adapter/in_memory'
 require_relative '../../app/objects/database_adapter/sqlite_db'
+require_relative '../../app/objects/database_adapter/sqlite_relationship'
 require_relative '../../app/migrations'
 require 'yaml'
 
@@ -31,7 +32,7 @@ end
 
 class CreateB
   def self.up(database)
-    database.create_table(:b, {z: :string, a_id: :integer})
+    database.create_table(:b, {z: :integer, a_id: :integer})
   end
 end
 
@@ -100,7 +101,7 @@ describe Obj::Database do
 
         subject.save
 
-        a2 = subject.find_by(:a, {id: a.id})
+        a2 = subject.find_by(:a, {id: a.db_id})
 
         expect(a2.bs.to_a.size).to eq(1)
         expect(a2.bs.to_a.first.z).to eq(3)

@@ -45,6 +45,8 @@ class Obj
         new
       end
 
+      attr_reader :db
+
       def initialize
         @db = Sequel.connect("sqlite://#{self.class.db_filename}")
         @type_sym_to_sequel_class = {}
@@ -103,7 +105,25 @@ class Obj
 
       def add_obj(obj)
         sequel_klass = @type_sym_to_sequel_class[obj.type_sym]
-        sequel_klass.create(obj.attrs)
+        belongs_to_rels = belongs_to_relationships(obj)
+        belongs_to_keys = belongs_to_rels.map{ |_,rel| rel.foreign_key }
+        attrs = obj.attrs.reject{ |k,_| belongs_to_keys.include?(k) }
+        attrs = attrs.merge(translated_foreign_keys(obj, belongs_to_rels))
+        obj.db_obj = sequel_klass.create(attrs)
+      end
+
+      def translated_foreign_keys(obj, belongs_to_rels)
+        belongs_to_rels.map do |name, rel|
+          rel_obj = obj.send(name)
+          [rel.foreign_key, rel_obj.db_obj.id]
+        end.to_h
+      end
+
+      def belongs_to_relationships(obj)
+        klass = type_sym_to_class(obj.type_sym)
+        klass.relationships.select do |_name, relationship|
+          relationship.rel_type == :belongs_to
+        end
       end
 
       def rem_obj(obj)
@@ -112,10 +132,14 @@ class Obj
       def update_obj(obj)
       end
 
-      def find_by(type_sym, finder_hash)
+      def where_by(type_sym, finder_hash)
         klass = @type_sym_to_sequel_class[type_sym]
-        objs = klass.where(finder_hash)
-        objs.map { |obj| wrap_obj(obj) }
+        db_objs = klass.where(finder_hash)
+        db_objs.map { |db_obj| wrap_obj(db_obj, type_sym) }
+      end
+
+      def find_by(type_sym, finder_hash)
+        where_by(type_sym, finder_hash).first
       end
 
       def register_class(obj_class)
@@ -154,8 +178,16 @@ class Obj
         @classes[type_sym]
       end
 
-      def wrap_obj(sequel_obj)
-        Obj.classes[obj.type_sym].allocate
+      def type_sym_to_class(type_sym)
+        Obj.classes[type_sym]
+      end
+
+      def wrap_obj(sequel_obj, type_sym)
+        obj = type_sym_to_class(type_sym).allocate
+        attrs = sequel_obj.values.reject{|k,_| k == :id}
+        obj.reset(type_sym, SecureRandom.hex, attrs, rel_adapter: Obj::DatabaseAdapter::SqliteRelationship.new(obj, self))
+        obj.db_obj = sequel_obj
+        obj
       end
 
       def get_objs(sym)
