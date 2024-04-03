@@ -159,6 +159,12 @@ class Obj
         end
       end
 
+      def close
+      end
+
+      def unlink
+      end
+
       def add_migrations_applied(migrations)
         migrations.each{ |migration| @migrations_applied.push(migration) }
       end

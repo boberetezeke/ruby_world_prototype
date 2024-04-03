@@ -66,9 +66,14 @@ describe Obj::Database do
 
   context 'when using in sqlite database' do
     before do
-      File.unlink(Obj::DatabaseAdapter::SqliteDb.db_filename) rescue nil
       allow(Obj::Database).to receive(:database_adapter).and_return(Obj::DatabaseAdapter::SqliteDb)
       Obj::Database.migrate([CreateA, CreateB], subject)
+    end
+
+    after do
+      subject.close
+      subject.unlink
+      sleep 1
     end
 
     #
@@ -87,7 +92,22 @@ describe Obj::Database do
     #
 
     context 'when loading after save' do
-      it 'load and save' do
+      it 'saves only a' do
+        puts "at beginning of 'saves only a'"
+        a = Obj::A.new(1,2)
+        subject.register_class(Obj::A)
+        subject.add_obj(a)
+
+        subject.save
+
+        a2 = subject.find_by(:a, {id: a.db_id})
+
+        expect(a2.x).to eq('1')
+        puts "at end of 'saves only a'"
+      end
+
+      it 'loads and saves a then b' do
+        puts "at beginning of 'loads and saves a then b'"
         a = Obj::A.new(1,2)
         b = Obj::B.new(3)
 
@@ -105,7 +125,31 @@ describe Obj::Database do
 
         expect(a2.bs.to_a.size).to eq(1)
         expect(a2.bs.to_a.first.z).to eq(3)
+        puts "at end of 'loads and saves a then b'"
       end
+
+      it 'loads and saves b then a' do
+        puts "at beginning of 'loads and saves b then a'"
+        a = Obj::A.new(1,2)
+        b = Obj::B.new(3)
+
+        subject.register_class(Obj::A)
+        subject.register_class(Obj::B)
+
+        b.a = a
+
+        subject.add_obj(b)
+        subject.add_obj(a)
+
+        subject.save
+
+        a2 = subject.find_by(:a, {id: a.db_id})
+
+        expect(a2.bs.to_a.size).to eq(1)
+        expect(a2.bs.to_a.first.z).to eq(3)
+        puts "at end of 'loads and saves b then a'"
+      end
+
     end
   end
 end

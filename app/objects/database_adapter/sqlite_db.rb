@@ -104,6 +104,9 @@ class Obj
       end
 
       def add_obj(obj)
+        # return if already in database
+        return if obj.db_obj
+
         sequel_klass = @type_sym_to_sequel_class[obj.type_sym]
         belongs_to_rels = belongs_to_relationships(obj)
         belongs_to_keys = belongs_to_rels.map{ |_,rel| rel.foreign_key }
@@ -115,7 +118,10 @@ class Obj
       def translated_foreign_keys(obj, belongs_to_rels)
         belongs_to_rels.map do |name, rel|
           rel_obj = obj.send(name)
-          [rel.foreign_key, rel_obj.db_obj.id]
+          if rel_obj && !rel_obj.db_obj
+            add_obj(rel_obj)
+          end
+          [rel.foreign_key, rel_obj&.db_obj&.id]
         end.to_h
       end
 
@@ -140,6 +146,18 @@ class Obj
 
       def find_by(type_sym, finder_hash)
         where_by(type_sym, finder_hash).first
+      end
+
+      def close
+        @db.disconnect
+      end
+
+      def unlink
+        begin
+          File.unlink(self.class.db_filename)
+        rescue
+          puts "couldn't unlink filename #{self.class.db_filename}"
+        end
       end
 
       def register_class(obj_class)

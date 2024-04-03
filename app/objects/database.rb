@@ -70,6 +70,14 @@ class Obj::Database
     @database_adapter.inspect
   end
 
+  def close
+    @database_adapter.close
+  end
+
+  def unlink
+    @database_adapter.unlink
+  end
+
   def method_missing(sym, *args)
     if sym.to_s =~ /(.*)s/
       sym = $1.to_sym
