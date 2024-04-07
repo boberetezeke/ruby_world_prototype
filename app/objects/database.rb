@@ -9,6 +9,10 @@ class Obj::Database
     database_adapter.migrate(all_migrations, database)
   end
 
+  def self.rollback(all_migrations, database)
+    database_adapter.rollback(all_migrations, database)
+  end
+
   def self.create_table(table_name, attrs_and_types)
     database_adapter.create_table(table_name, attrs_and_types)
   end
@@ -32,6 +36,10 @@ class Obj::Database
 
   def create_table(*args)
     @database_adapter.create_table(*args)
+  end
+
+  def drop_table(*args)
+    @database_adapter.drop_table(*args)
   end
 
   def tag_context
@@ -70,8 +78,12 @@ class Obj::Database
     @database_adapter.inspect
   end
 
-  def close
-    @database_adapter.close
+  def connect
+    @database_adapter.connect
+  end
+
+  def disconnect
+    @database_adapter.disconnect
   end
 
   def unlink

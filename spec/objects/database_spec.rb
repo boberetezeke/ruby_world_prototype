@@ -28,11 +28,19 @@ class CreateA
   def self.up(database)
     database.create_table(:a, {x: :string, y: :string})
   end
+
+  def self.down(database)
+    database.drop_table(:a)
+  end
 end
 
 class CreateB
   def self.up(database)
     database.create_table(:b, {z: :integer, a_id: :integer})
+  end
+
+  def self.down(database)
+    database.drop_table(:b)
   end
 end
 
@@ -67,13 +75,12 @@ describe Obj::Database do
   context 'when using in sqlite database' do
     before do
       allow(Obj::Database).to receive(:database_adapter).and_return(Obj::DatabaseAdapter::SqliteDb)
+      subject.connect
       Obj::Database.migrate([CreateA, CreateB], subject)
     end
 
     after do
-      subject.close
-      subject.unlink
-      sleep 1
+      Obj::Database.rollback([CreateB, CreateA], subject)
     end
 
     #

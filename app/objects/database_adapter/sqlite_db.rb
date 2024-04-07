@@ -37,6 +37,12 @@ class Obj
         end
       end
 
+      def self.rollback(all_migrations, database)
+        all_migrations.each do |migration|
+          migration.down(database)
+        end
+      end
+
       def self.db_filename
         'test.sqlite'
       end
@@ -48,7 +54,6 @@ class Obj
       attr_reader :db
 
       def initialize
-        @db = Sequel.connect("sqlite://#{self.class.db_filename}")
         @type_sym_to_sequel_class = {}
         @sequel_class_to_type_sym = {}
       end
@@ -67,6 +72,10 @@ class Obj
             end
           end
         end
+      end
+
+      def drop_table(table_name)
+        @db.drop_table(table_name)
       end
 
       def all(relation)
@@ -148,7 +157,12 @@ class Obj
         where_by(type_sym, finder_hash).first
       end
 
-      def close
+      def connect
+        # @db = Sequel.connect("sqlite://test-#{rand(100)}.sqlite")
+        @db = Sequel.connect("sqlite://#{self.class.db_filename}")
+      end
+
+      def disconnect
         @db.disconnect
       end
 
@@ -158,6 +172,7 @@ class Obj
         rescue
           puts "couldn't unlink filename #{self.class.db_filename}"
         end
+        @db = nil
       end
 
       def register_class(obj_class)

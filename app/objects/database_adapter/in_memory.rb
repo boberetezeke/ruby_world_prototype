@@ -159,7 +159,16 @@ class Obj
         end
       end
 
-      def close
+      def connect
+      end
+
+      def disconnect
+      end
+
+      def create_table(*args)
+      end
+
+      def drop_table(*args)
       end
 
       def unlink
