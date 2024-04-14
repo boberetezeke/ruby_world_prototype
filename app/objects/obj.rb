@@ -14,8 +14,8 @@ load "#{path}/obj/relationship.rb"
 load "#{path}/database_adapter/in_memory_relationship.rb"
 
 class Obj
-  attr_reader :id, :type_sym, :attrs, :changes, :db
-  attr_accessor :db_obj
+  attr_reader :id, :type_sym, :attrs, :changes
+  attr_reader :db_obj, :db
 
   def initialize(type_sym, attrs, track_changes: true)
     reset(type_sym, SecureRandom.hex, attrs, track_changes: track_changes)
@@ -25,8 +25,9 @@ class Obj
     @db_obj&.id
   end
 
-  def added_to_db(db)
+  def added_to_db(db, db_obj: nil)
     @db = db
+    @db_obj = db_obj
     # pick database relationship handler here?
     # @rel_adapter = Obj::DatabaseAdapter::InMemoryRelationship.new
   end
@@ -180,6 +181,7 @@ class Obj
 
   def update(obj)
     @attrs = obj.attrs
+    save
   end
 
   def remove_keys(*keys)

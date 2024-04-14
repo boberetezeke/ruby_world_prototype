@@ -47,24 +47,25 @@ class Obj
         if database
           database.reindex
         else
-          database = read
+          database = read(database)
           database.index_objects
         end
         database
       end
 
-      def self.read
-        database = self.new
-        return database unless File.exist?(db_path)
+      def self.read(database)
+        database_adapter = self.new(database)
+        return database_adapter unless File.exist?(db_path)
 
         yml = File.open(db_path) { |f| YAML.load(f) }
-        database.deserialize(yml)
-        database.reindex
-        database = migrate(Migrations.migrations, database)
-        database
+        database_adapter.deserialize(yml)
+        database_adapter.reindex
+        database_adapter = migrate(Migrations.migrations, database_adapter)
+        database_adapter
       end
 
-      def initialize
+      def initialize(database)
+        @database = database
         @objs = {}
         @classes = {}
         @migrations_applied = []

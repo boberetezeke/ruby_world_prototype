@@ -10,6 +10,10 @@ class Obj
           @table_name = table_name
         end
 
+        def size
+          values.size
+        end
+
         def values
           all
         end
@@ -48,12 +52,13 @@ class Obj
       end
 
       def self.load_or_reload(database)
-        new
+        new(database)
       end
 
       attr_reader :db
 
-      def initialize
+      def initialize(database)
+        @database = database
         @type_sym_to_sequel_class = {}
         @sequel_class_to_type_sym = {}
       end
@@ -69,6 +74,8 @@ class Obj
               Float col_name
             when :integer
               Integer col_name
+            when :datetime
+              Time col_name
             end
           end
         end
@@ -117,14 +124,18 @@ class Obj
         return if obj.db_obj
 
         sequel_klass = @type_sym_to_sequel_class[obj.type_sym]
-        belongs_to_rels = belongs_to_relationships(obj)
-        belongs_to_keys = belongs_to_rels.map{ |_,rel| rel.foreign_key }
-        attrs = obj.attrs.reject{ |k,_| belongs_to_keys.include?(k) }
-        attrs = attrs.merge(translated_foreign_keys(obj, belongs_to_rels))
-        obj.db_obj = sequel_klass.create(attrs)
+        obj.added_to_db(@database, db_obj: sequel_klass.create(db_attrs(obj)))
+        obj
       end
 
-      def translated_foreign_keys(obj, belongs_to_rels)
+      def db_attrs(obj)
+        belongs_to_rels = belongs_to_relationships(obj)
+        belongs_to_keys = belongs_to_rels.map{ |_,rel| rel.foreign_key }
+        attrs = obj.attrs.reject{ |k,_| belongs_to_keys.include?(k) || k == :id }
+        attrs.merge(translated_foreign_key_attrs(obj, belongs_to_rels))
+      end
+
+      def translated_foreign_key_attrs(obj, belongs_to_rels)
         belongs_to_rels.map do |name, rel|
           rel_obj = obj.send(name)
           if rel_obj && !rel_obj.db_obj
@@ -145,6 +156,7 @@ class Obj
       end
 
       def update_obj(obj)
+        obj.db_obj.update(db_attrs(obj))
       end
 
       def where_by(type_sym, finder_hash)
@@ -197,7 +209,16 @@ class Obj
           when :belongs_to
             "many_to_one :sequel_#{rel.name}, key: :#{rel.foreign_key}"
           when :has_many
-            "one_to_many :sequel_#{rel.name}, key: :#{rel.foreign_key}"
+            if rel.through
+              through = klass.relationships[rel.through]
+              through_table = through.target_type_sym
+              "many_to_many :sequel_#{rel.name}, " +
+                "join_table: :sequel_#{through_table}, " +
+                "left_key: :sequel_#{through.foreign_key}, " +
+                "right_key: :sequel_#{rel.through_next}_id "
+            else
+              "one_to_many :sequel_#{rel.name}, key: :#{rel.foreign_key}"
+            end
           end
         end
 
@@ -219,7 +240,7 @@ class Obj
         obj = type_sym_to_class(type_sym).allocate
         attrs = sequel_obj.values.reject{|k,_| k == :id}
         obj.reset(type_sym, SecureRandom.hex, attrs, rel_adapter: Obj::DatabaseAdapter::SqliteRelationship.new(obj, self))
-        obj.db_obj = sequel_obj
+        obj.added_to_db(@database, db_obj: sequel_obj)
         obj
       end
 

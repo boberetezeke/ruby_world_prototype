@@ -27,7 +27,7 @@ class Obj::Database
 
   def initialize
     @tag_context = 'tag'
-    @database_adapter = self.class.database_adapter.new
+    @database_adapter = self.class.database_adapter.new(self)
   end
 
   def register_class(obj_class)
@@ -67,7 +67,7 @@ class Obj::Database
   end
 
   def update_obj(obj)
-    @database_adapter.save_obj(obj)
+    @database_adapter.update_obj(obj)
   end
 
   def find_by(type_sym, finder_hash)

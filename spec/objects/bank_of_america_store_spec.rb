@@ -3,7 +3,15 @@ require_relative '../../app/objects/obj/change'
 require_relative '../../app/objects/obj/changes'
 require_relative '../../app/objects/database'
 require_relative '../../app/objects/database_adapter/in_memory'
+require_relative '../../app/objects/database_adapter/sqlite_db'
+require_relative '../../app/objects/database_adapter/sqlite_relationship'
 require_relative '../../app/objects/store'
+
+require_relative '../../app/migrations/add_charge_migration'
+require_relative '../../app/migrations/add_credit_card_migration'
+require_relative '../../app/migrations/add_vendor_migration'
+require_relative '../../app/migrations/add_tag_migration'
+require_relative '../../app/migrations/add_tagging_migration'
 
 require_relative '../../app/objects/tag'
 require_relative '../../app/objects/tagging'
@@ -22,7 +30,25 @@ describe Obj::BankOfAmericaStore do
     let(:db) { Obj::Database.new }
     subject { Obj::BankOfAmericaStore.new(db, 'spec/fixtures')}
 
+    let(:migrations) do [
+      Obj::AddChargeMigration,
+      Obj::AddVendorMigration,
+      Obj::AddCreditCardMigration,
+      Obj::AddTaggingMigration,
+      Obj::AddTagMigration,
+    ]
+    end
+
     before do
+      allow(Obj::Database).to receive(:database_adapter).and_return(Obj::DatabaseAdapter::SqliteDb)
+      db.connect
+      Obj::Database.migrate(migrations, db)
+      db.register_class(Obj::Charge)
+      db.register_class(Obj::Tagging)
+      db.register_class(Obj::Tag)
+      db.register_class(Obj::Vendor)
+      db.register_class(Obj::CreditCard)
+
       db.add_obj(Obj::Tag.new('steve'))
       db.add_obj(Obj::Tag.new('expenses'))
       db.add_obj(Obj::Tag.new('entertainment'))
@@ -30,7 +56,11 @@ describe Obj::BankOfAmericaStore do
       subject.sync
     end
 
-    it 'builds the credit_charge objects' do
+    after do
+      Obj::Database.rollback(migrations, db)
+    end
+
+    it 'builds the charge objects' do
       expect(db.objs[:charge].size).to eq(4)
     end
 

@@ -56,9 +56,9 @@ class Obj::BankOfAmericaStore < Obj::Store
       db_vendor = find_or_add_vendor(charge.vendor) if charge.vendor
       db_credit_card = find_or_add_credit_card(charge.credit_card) if charge.credit_card
 
-      db_charge.update(charge)
       db_charge.vendor = db_vendor
       db_charge.credit_card = db_credit_card
+      db_charge.update(charge)
 
       update_description(db_charge, db_vendor)
       tag_charge(db_charge)

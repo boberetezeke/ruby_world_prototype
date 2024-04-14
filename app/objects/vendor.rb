@@ -1,4 +1,6 @@
 class Obj::Vendor < Obj
+  type_sym :vendor
+
   has_many :charges, :charge, :vendor_id, inverse_of: :vendor
 
   def self.default_display
