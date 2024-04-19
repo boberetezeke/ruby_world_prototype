@@ -73,6 +73,7 @@ describe Obj::BankOfAmericaStore do
     end
 
     it 'has the correct info in the charge object' do
+      db.info
       air_bnb_charge_1 = db.objs[:charge].values.find{|bp| bp.remote_id == '24492153192717417862520'}
       air_bnb_vendor = air_bnb_charge_1.vendor
       expect(air_bnb_charge_1.amount).to eq(-386.65)

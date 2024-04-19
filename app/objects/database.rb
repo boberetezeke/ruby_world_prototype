@@ -30,6 +30,10 @@ class Obj::Database
     @database_adapter = self.class.database_adapter.new(self)
   end
 
+  def info
+    @database_adapter.info
+  end
+
   def register_class(obj_class)
     @database_adapter.register_class(obj_class)
   end
@@ -58,8 +62,8 @@ class Obj::Database
     @database_adapter.objs
   end
 
-  def add_obj(obj)
-    @database_adapter.add_obj(obj)
+  def add_obj(obj, save_belongs_tos: true)
+    @database_adapter.add_obj(obj, save_belongs_tos: save_belongs_tos)
   end
 
   def rem_obj(obj)

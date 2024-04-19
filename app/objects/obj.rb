@@ -25,17 +25,22 @@ class Obj
     @db_obj&.id
   end
 
-  def added_to_db(db, db_obj: nil)
+  def added_to_db(db, db_obj: nil, rel_adapter: nil)
     @db = db
     @db_obj = db_obj
-    # pick database relationship handler here?
-    # @rel_adapter = Obj::DatabaseAdapter::InMemoryRelationship.new
+    if rel_adapter
+      rel_adapter.in_mem_adapter = Obj::DatabaseAdapter::InMemoryRelationship.new(self)
+      @rel_adapter = rel_adapter
+    else
+      @rel_adapter = Obj::DatabaseAdapter::InMemoryRelationship.new(obj)
+    end
   end
 
-  def reset(type_sym, id, attrs, track_changes: true, rel_adapter: Obj::DatabaseAdapter::InMemoryRelationship.new(self))
+  def reset(type_sym, id, attrs, db_obj: nil, track_changes: true, rel_adapter: Obj::DatabaseAdapter::InMemoryRelationship.new(self))
     @rel_adapter = rel_adapter
     @type_sym = type_sym
     @id = id
+    @db_obj = db_obj
     @attrs = default_belongs_to_attrs.merge(attrs)
     @changes = Obj::Changes.new
     if track_changes
@@ -52,7 +57,7 @@ class Obj
 
   def dup
     d = self.class.allocate
-    d.reset(@type_sym, SecureRandom.hex, @attrs)
+    d.reset(@type_sym, SecureRandom.hex, @attrs, db_obj: @db_obj)
   end
 
   def default_belongs_to_attrs
@@ -158,7 +163,7 @@ class Obj
 
   def self.new_from_db(type_sym, attrs)
     obj = @@classes[type_sym].allocate
-    obj.reset(type_sym, SecureRandom.hex, attrs)
+    obj.reset(type_sym, SecureRandom.hex, attrs, db_obj: obj.db_obj)
     obj
   end
 
@@ -179,8 +184,24 @@ class Obj
     self.class.relationships
   end
 
-  def update(obj)
-    @attrs = obj.attrs
+
+  def belongs_to_relationships
+    relationships.select do |_name, relationship|
+      relationship.rel_type == :belongs_to
+    end
+  end
+
+  def belongs_to_keys
+    belongs_to_relationships.map{ |_,rel| rel.foreign_key }
+  end
+
+  def update(obj, update_belongs_tos: true)
+    attrs = obj.attrs
+    unless update_belongs_tos
+      attrs = obj.attrs.reject{ |k,_| belongs_to_keys.include?(k) || k == :id }
+    end
+
+    @attrs = @attrs.merge(attrs)
     save
   end
 

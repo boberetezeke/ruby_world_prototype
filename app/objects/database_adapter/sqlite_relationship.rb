@@ -1,24 +1,16 @@
 class Obj::DatabaseAdapter::SqliteRelationship
+  attr_accessor :in_mem_adapter
   def initialize(obj, sequel_adapter)
     @obj = obj
     @sequel_adapter = sequel_adapter
   end
 
   def belongs_to_read(rel)
-    puts 'here'
-    # id = @attrs[rel.foreign_key]
-    # id.nil? ? nil : @obj.class.objects[id]
+    @sequel_adapter.belongs_to_read(@obj, rel)
   end
 
   def belongs_to_assign(rel, rhs)
-    # old_val = @attrs[rel.foreign_key]
-    # new_val = rhs&.id
-    # foreign_key = rel.foreign_key
-    # @changes.add(Obj::Change.new(foreign_key, @attrs[foreign_key], new_val))
-    # @attrs[rel.foreign_key] = new_val
-    # @attrs[rel.foreign_type] = rhs.type_sym if rel.polymorphic && !rhs.nil?
-    # rel.inverse(@obj).index.update(old_val, new_val, @obj)
-    # @attrs[rel.foreign_type] = nil if rel.polymorphic && rhs.nil?
+    @in_mem_adapter.belongs_to_assign(rel, rhs)
   end
 
   def has_many_read(rel)

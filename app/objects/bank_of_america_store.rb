@@ -58,7 +58,7 @@ class Obj::BankOfAmericaStore < Obj::Store
 
       db_charge.vendor = db_vendor
       db_charge.credit_card = db_credit_card
-      db_charge.update(charge)
+      db_charge.update(charge, update_belongs_tos: false)
 
       update_description(db_charge, db_vendor)
       tag_charge(db_charge)
@@ -129,7 +129,7 @@ class Obj::BankOfAmericaStore < Obj::Store
     db_charge = @db.find_by(:charge, { remote_id: charge.remote_id} )
     return db_charge if db_charge
 
-    @db.add_obj(charge.dup)
+    @db.add_obj(charge.dup, save_belongs_tos: false)
   end
 
   def find_or_add_vendor(vendor)

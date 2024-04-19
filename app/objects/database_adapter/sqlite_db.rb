@@ -63,6 +63,18 @@ class Obj
         @sequel_class_to_type_sym = {}
       end
 
+      def info
+        @db[:credit_card].to_a.each do |credit_card|
+          puts "credit_card: #{credit_card}"
+        end
+        @db[:vendor].to_a.each do |vendor|
+          puts "vendor: #{vendor}"
+        end
+        @db[:charge].to_a.each do |charge|
+          puts "charge: #{charge}"
+        end
+      end
+
       def create_table(table_name, columns)
         @db.create_table table_name do
           primary_key :id
@@ -119,20 +131,35 @@ class Obj
         Relation.new(@db, name)
       end
 
-      def add_obj(obj)
+      def add_obj(obj, save_belongs_tos: true)
         # return if already in database
         return if obj.db_obj
 
-        sequel_klass = @type_sym_to_sequel_class[obj.type_sym]
-        obj.added_to_db(@database, db_obj: sequel_klass.create(db_attrs(obj)))
+        obj.added_to_db(@database,
+                        db_obj: sequel_klass(obj).create(db_attrs(obj, save_belongs_tos: save_belongs_tos)),
+                        rel_adapter: Obj::DatabaseAdapter::SqliteRelationship.new(obj, self))
         obj
       end
 
-      def db_attrs(obj)
+      def belongs_to_read(obj, rel)
+        db_obj = obj.db_obj.send("sequel_#{rel.name}".to_sym)
+        return nil unless db_obj
+        wrap_obj(db_obj, obj.type_sym)
+      end
+
+      def sequel_klass(obj)
+        @type_sym_to_sequel_class[obj.type_sym]
+      end
+
+      def db_attrs(obj, save_belongs_tos: true)
         belongs_to_rels = belongs_to_relationships(obj)
         belongs_to_keys = belongs_to_rels.map{ |_,rel| rel.foreign_key }
         attrs = obj.attrs.reject{ |k,_| belongs_to_keys.include?(k) || k == :id }
-        attrs.merge(translated_foreign_key_attrs(obj, belongs_to_rels))
+        attrs.merge(
+          save_belongs_tos ?
+            translated_foreign_key_attrs(obj, belongs_to_rels) :
+            {}
+        )
       end
 
       def translated_foreign_key_attrs(obj, belongs_to_rels)
@@ -156,6 +183,15 @@ class Obj
       end
 
       def update_obj(obj)
+        belongs_to_relationships(obj).each do |name, rel|
+          rel_obj = obj.send(name)
+          if rel_obj
+            rel_val = rel_obj.db_obj
+          else
+            rel_val = nil
+          end
+          obj.db_obj.send("sequel_#{name}=", rel_val)
+        end
         obj.db_obj.update(db_attrs(obj))
       end
 
@@ -222,10 +258,13 @@ class Obj
           end
         end
 
-        [
-          "class " + class_name + " < Sequel::Model(:#{type_sym});" + rels.join(";") + ";end",
-          class_name
-        ]
+        class_def_str =
+          "class " + class_name +
+            " < Sequel::Model(:#{type_sym});" +
+            rels.join(";") + ";end"
+        puts "class def: #{class_def_str}"
+
+        [class_def_str, class_name]
       end
 
       def type_sym_to_sequel_class(type_sym)
@@ -240,7 +279,10 @@ class Obj
         obj = type_sym_to_class(type_sym).allocate
         attrs = sequel_obj.values.reject{|k,_| k == :id}
         obj.reset(type_sym, SecureRandom.hex, attrs, rel_adapter: Obj::DatabaseAdapter::SqliteRelationship.new(obj, self))
-        obj.added_to_db(@database, db_obj: sequel_obj)
+        obj.added_to_db(
+          @database,
+          db_obj: sequel_obj,
+          rel_adapter: Obj::DatabaseAdapter::SqliteRelationship.new(obj, self))
         obj
       end
 
