@@ -6,7 +6,13 @@ class Obj::DatabaseAdapter::SqliteRelationship
   end
 
   def belongs_to_read(rel)
-    @sequel_adapter.belongs_to_read(@obj, rel)
+    unless @obj.rel_cached?(rel)
+      @obj.cache_rel(rel)
+      obj = @sequel_adapter.belongs_to_read(@obj, rel)
+      @in_mem_adapter.belongs_to_assign(rel, obj)
+    end
+
+    @in_mem_adapter.belongs_to_read(rel)
   end
 
   def belongs_to_assign(rel, rhs)
@@ -14,11 +20,17 @@ class Obj::DatabaseAdapter::SqliteRelationship
   end
 
   def has_many_read(rel)
-    sequel_objs = @obj.db_obj.send("sequel_#{rel.name}")
-    sequel_objs.map{ |sequel_obj| @sequel_adapter.wrap_obj(sequel_obj, @obj.type_sym) }
+    unless @obj.rel_cached?(rel)
+      @obj.cache_rel(rel)
+      objs = @sequel_adapter.has_many_read(@obj, rel)
+      @in_mem_adapter.has_many_assign(rel, objs)
+    end
+
+    @in_mem_adapter.has_many_read(rel)
   end
 
   def has_many_through_read(rel)
+    has_many_read(rel)
     # complete, has_many_array = relationship_read(rel.through)
     # return [false, nil] unless complete
     # objs = has_many_array.to_a.map do |obj|

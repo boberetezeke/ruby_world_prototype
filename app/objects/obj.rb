@@ -42,6 +42,7 @@ class Obj
     @id = id
     @db_obj = db_obj
     @attrs = default_belongs_to_attrs.merge(attrs)
+    @rel_cache = {}
     @changes = Obj::Changes.new
     if track_changes
       @attrs.each do |attr, value|
@@ -53,6 +54,14 @@ class Obj
     self.class.classes[type_sym] = self.class
     update_indexes(self)
     self
+  end
+
+  def rel_cached?(rel)
+    @rel_cache[rel.name]
+  end
+
+  def cache_rel(rel)
+    @rel_cache[rel.name] = true
   end
 
   def dup

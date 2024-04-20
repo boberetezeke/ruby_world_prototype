@@ -147,6 +147,11 @@ class Obj
         wrap_obj(db_obj, obj.type_sym)
       end
 
+      def has_many_read(obj, rel)
+        sequel_objs = @obj.db_obj.send("sequel_#{rel.name}")
+        sequel_objs.map{ |sequel_obj| @sequel_adapter.wrap_obj(sequel_obj, @obj.type_sym) }
+      end
+
       def sequel_klass(obj)
         @type_sym_to_sequel_class[obj.type_sym]
       end
