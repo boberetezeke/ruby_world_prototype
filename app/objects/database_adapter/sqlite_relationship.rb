@@ -5,8 +5,8 @@ class Obj::DatabaseAdapter::SqliteRelationship
     @sequel_adapter = sequel_adapter
   end
 
-  def belongs_to_read(rel)
-    unless @obj.rel_cached?(rel)
+  def belongs_to_read(rel, use_cache: true)
+    if use_cache && !@obj.rel_cached?(rel)
       @obj.cache_rel(rel)
       obj = @sequel_adapter.belongs_to_read(@obj, rel)
       @in_mem_adapter.belongs_to_assign(rel, obj)
@@ -51,5 +51,8 @@ class Obj::DatabaseAdapter::SqliteRelationship
     # rhs.each do |obj|
     #   obj.send("#{rel.inverse(@obj).name}=", @obj)
     # end
+  end
+
+  def update_indexes(_relationships)
   end
 end

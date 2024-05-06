@@ -148,8 +148,8 @@ class Obj
       end
 
       def has_many_read(obj, rel)
-        sequel_objs = @obj.db_obj.send("sequel_#{rel.name}")
-        sequel_objs.map{ |sequel_obj| @sequel_adapter.wrap_obj(sequel_obj, @obj.type_sym) }
+        sequel_objs = obj.db_obj.send("sequel_#{rel.name}")
+        sequel_objs.map{ |sequel_obj| wrap_obj(sequel_obj, obj.type_sym) }
       end
 
       def sequel_klass(obj)
@@ -159,7 +159,12 @@ class Obj
       def db_attrs(obj, save_belongs_tos: true)
         belongs_to_rels = belongs_to_relationships(obj)
         belongs_to_keys = belongs_to_rels.map{ |_,rel| rel.foreign_key }
-        attrs = obj.attrs.reject{ |k,_| belongs_to_keys.include?(k) || k == :id }
+        belongs_to_types = belongs_to_rels.map{ |_,rel| rel.foreign_type }.compact
+        attrs = obj.attrs.reject do |k,_|
+          belongs_to_keys.include?(k) ||
+          belongs_to_types.include?(k) ||
+          k == :id
+        end
         attrs.merge(
           save_belongs_tos ?
             translated_foreign_key_attrs(obj, belongs_to_rels) :
@@ -168,13 +173,19 @@ class Obj
       end
 
       def translated_foreign_key_attrs(obj, belongs_to_rels)
-        belongs_to_rels.map do |name, rel|
+        k_and_vs = []
+        belongs_to_rels.each do |name, rel|
           rel_obj = obj.send(name)
           if rel_obj && !rel_obj.db_obj
             add_obj(rel_obj)
           end
-          [rel.foreign_key, rel_obj&.db_obj&.id]
-        end.to_h
+          k_and_vs.push([rel.foreign_key, rel_obj&.db_obj&.id])
+          if rel_obj && rel.foreign_type
+            k_and_vs.push([rel.foreign_type, rel_obj&.class.to_s])
+          end
+        end
+
+        k_and_vs.to_h
       end
 
       def belongs_to_relationships(obj)
@@ -189,7 +200,7 @@ class Obj
 
       def update_obj(obj)
         belongs_to_relationships(obj).each do |name, rel|
-          rel_obj = obj.send(name)
+          rel_obj = obj.belongs_to_read(rel, use_cache: false)
           if rel_obj
             rel_val = rel_obj.db_obj
           else
@@ -254,7 +265,7 @@ class Obj
               through = klass.relationships[rel.through]
               through_table = through.target_type_sym
               "many_to_many :sequel_#{rel.name}, " +
-                "join_table: :sequel_#{through_table}, " +
+                "join_table: :#{through_table}, " +
                 "left_key: :sequel_#{through.foreign_key}, " +
                 "right_key: :sequel_#{rel.through_next}_id "
             else

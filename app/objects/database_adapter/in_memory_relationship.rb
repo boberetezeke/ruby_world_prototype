@@ -3,7 +3,7 @@ class Obj::DatabaseAdapter::InMemoryRelationship
     @obj = obj
   end
 
-  def belongs_to_read(rel)
+  def belongs_to_read(rel, use_cache: false)
     id = @obj.attrs[rel.foreign_key]
     id.nil? ? nil : @obj.class.objects[id]
   end
@@ -43,6 +43,15 @@ class Obj::DatabaseAdapter::InMemoryRelationship
     end
     rhs.each do |obj|
       obj.send("#{rel.inverse(@obj).name}=", @obj)
+    end
+  end
+
+  def update_indexes(relationships)
+    relationships.each do |_, rel|
+      if rel.rel_type == :belongs_to && rel.inverse_of
+        belongs_to_obj = @obj.send(rel.name)
+        rel.inverse(@obj).index.add(belongs_to_obj.id, @obj) if belongs_to_obj
+      end
     end
   end
 end

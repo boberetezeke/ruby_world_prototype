@@ -52,7 +52,7 @@ class Obj
 
     self.class.objects[@id] = self
     self.class.classes[type_sym] = self.class
-    update_indexes(self)
+    @rel_adapter.update_indexes(relationships)
     self
   end
 
@@ -176,15 +176,6 @@ class Obj
     obj
   end
 
-  def update_indexes(obj)
-    relationships.each do |_, rel|
-      if rel.rel_type == :belongs_to && rel.inverse_of
-        belongs_to_obj = obj.send(rel.name)
-        rel.inverse(obj).index.add(belongs_to_obj.id, obj) if belongs_to_obj
-      end
-    end
-  end
-
   def inspect
     @attrs
   end
@@ -245,15 +236,27 @@ class Obj
   def relationship_read(sym)
     rel = relationships[sym]
     if rel.rel_type == :belongs_to
-      return [true, @rel_adapter.belongs_to_read(rel)]
+      return [true, belongs_to_read(rel)]
     elsif rel.rel_type == :has_many
       if rel.through
-        return [true, @rel_adapter.has_many_through_read(rel)]
+        return [true, has_many_through_read(rel)]
       else
-        return [true, @rel_adapter.has_many_read(rel)]
+        return [true, has_many_read(rel)]
       end
     end
     return [false, nil]
+  end
+
+  def belongs_to_read(rel, use_cache: true)
+    @rel_adapter.belongs_to_read(rel, use_cache: use_cache)
+  end
+
+  def has_many_read(rel, use_cache: true)
+    @rel_adapter.has_many_read(rel)
+  end
+
+  def has_many_through_read(rel, use_cache: true)
+    @rel_adapter.has_many_through_read(rel)
   end
 
   def attr_read(sym)
