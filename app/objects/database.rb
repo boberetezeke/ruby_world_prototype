@@ -94,6 +94,10 @@ class Obj::Database
     @database_adapter.unlink
   end
 
+  def migrations_applied
+    @database_adapter.migrations_applied
+  end
+
   def method_missing(sym, *args)
     if sym.to_s =~ /(.*)s/
       sym = $1.to_sym

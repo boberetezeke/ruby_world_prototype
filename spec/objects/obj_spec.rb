@@ -175,6 +175,25 @@ describe Obj do
           end
         end
 
+        context 'when assigning, re-assigning and retrieving a has_many relationship' do
+          before do
+            @a = A.new(1,2)
+            @b3 = B.new(3)
+            @b4 = B.new(4)
+            @b5 = B.new(5)
+            @a.bs = [@b3, @b4]
+            @a.bs = [@b4, @b5]
+          end
+
+          it 'assigns and retrieves a has_many relationship' do
+            expect(@a.bs.to_a).to eq([@b4, @b5])
+          end
+
+          it 'creates a change on the b object' do
+            expect(@b.changes.for_sym(:a_id)).to eq(Obj::Change.new(:a_id, nil, @a.id))
+          end
+        end
+
         context 'when assigning using push' do
           before do
             @a = A.new(1,2)

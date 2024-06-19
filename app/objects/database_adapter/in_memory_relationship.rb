@@ -38,9 +38,17 @@ class Obj::DatabaseAdapter::InMemoryRelationship
 
   def has_many_assign(rel, rhs)
     raise 'has_many relationships can only accept array values' unless rhs.is_a?(Array)
-    rel.index[@obj.id].each do |obj|
-      obj.send("#{rel.rel_name}=", nil)
+    # re-assign index to contain rhs values
+    # rel.index[@obj.id].each do |obj|
+    #   obj.send("#{rel.name}=", nil)
+    # end
+
+    # nil out currently assiged foreign keys
+    has_many_read(rel).each do |obj|
+      obj.send("#{rel.inverse(obj).name}=", nil)
     end
+
+    # set new values
     rhs.each do |obj|
       obj.send("#{rel.inverse(@obj).name}=", @obj)
     end

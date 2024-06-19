@@ -4,10 +4,10 @@ class Obj
   module DatabaseAdapter
     class SqliteDb
       class Relation
-        attr_reader :table_name
-        def initialize(database, table_name)
+        attr_reader :type_sym
+        def initialize(database, type_sym)
           @database = database
-          @table_name = table_name
+          @type_sym = type_sym
         end
 
         def size
@@ -19,8 +19,11 @@ class Obj
         end
 
         def all
-          @database.all(self).map do |attrs|
-            Obj.new_from_db(@table_name, attrs)
+          # TODO: need to find the sequel class for the type sym and do an all for that
+          klass = @database.type_sym_to_sequel_class(@type_sym)
+          klass.all.map do |obj|
+            @database.wrap_obj(obj, @type_sym)
+            # Obj.new_from_db(@table_name, attrs)
           end
         end
       end
@@ -98,7 +101,7 @@ class Obj
       end
 
       def all(relation)
-        @db[relation.table_name.to_sym].all
+        @db[relation.type_sym].all
       end
 
       def objs
@@ -144,12 +147,12 @@ class Obj
       def belongs_to_read(obj, rel)
         db_obj = obj.db_obj.send("sequel_#{rel.name}".to_sym)
         return nil unless db_obj
-        wrap_obj(db_obj, obj.type_sym)
+        wrap_obj(db_obj, rel.target_type_sym)
       end
 
       def has_many_read(obj, rel)
         sequel_objs = obj.db_obj.send("sequel_#{rel.name}")
-        sequel_objs.map{ |sequel_obj| wrap_obj(sequel_obj, obj.type_sym) }
+        sequel_objs.map{ |sequel_obj| wrap_obj(sequel_obj, rel.target_type_sym) }
       end
 
       def sequel_klass(obj)
@@ -266,8 +269,8 @@ class Obj
               through_table = through.target_type_sym
               "many_to_many :sequel_#{rel.name}, " +
                 "join_table: :#{through_table}, " +
-                "left_key: :sequel_#{through.foreign_key}, " +
-                "right_key: :sequel_#{rel.through_next}_id "
+                "left_key: :#{through.foreign_key}, " +
+                "right_key: :#{rel.through_next}_id "
             else
               "one_to_many :sequel_#{rel.name}, key: :#{rel.foreign_key}"
             end
@@ -284,7 +287,7 @@ class Obj
       end
 
       def type_sym_to_sequel_class(type_sym)
-        @classes[type_sym]
+        @type_sym_to_sequel_class[type_sym]
       end
 
       def type_sym_to_class(type_sym)

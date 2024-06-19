@@ -32,7 +32,7 @@ class Obj
       rel_adapter.in_mem_adapter = Obj::DatabaseAdapter::InMemoryRelationship.new(self)
       @rel_adapter = rel_adapter
     else
-      @rel_adapter = Obj::DatabaseAdapter::InMemoryRelationship.new(obj)
+      @rel_adapter = Obj::DatabaseAdapter::InMemoryRelationship.new(self)
     end
   end
 

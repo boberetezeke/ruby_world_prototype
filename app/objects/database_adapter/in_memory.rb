@@ -21,7 +21,7 @@ class Obj
         database_backup = Marshal.dump(database)
         migrations_to_apply = (all_migrations - database.migrations_applied)
         migrations_to_apply.each do |migration|
-          klass = eval(migration)
+          klass = migration
           begin
             puts "migrating: #{klass}"
             klass.up(database)
@@ -37,6 +37,9 @@ class Obj
         end
         database.add_migrations_applied(migrations_to_apply)
         return database
+      end
+
+      def self.rollback(all_migrations, database)
       end
 
       def self.db_path
@@ -121,7 +124,10 @@ class Obj
         @changes = []
       end
 
-      def add_obj(obj)
+      def info
+      end
+
+      def add_obj(obj, save_belongs_tos: nil)
         class_name = obj.class.to_s
         @classes[obj.type_sym] = class_name
         objs_of_type = @objs[obj.type_sym] || {}
