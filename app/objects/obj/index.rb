@@ -7,6 +7,10 @@ class Index
     @index = {}
   end
 
+  def values
+    @index.values
+  end
+
   def add(k, v)
     return if k.nil?
 

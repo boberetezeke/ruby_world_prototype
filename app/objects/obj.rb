@@ -17,6 +17,11 @@ class Obj
   attr_reader :id, :type_sym, :attrs, :changes
   attr_reader :db_obj, :db
 
+  def self.new_blank_obj(type_sym)
+    d = classes[type_sym].allocate
+    d.reset(type_sym, SecureRandom.hex, {})
+  end
+
   def initialize(type_sym, attrs, track_changes: true)
     reset(type_sym, SecureRandom.hex, attrs, track_changes: track_changes)
   end
@@ -91,10 +96,10 @@ class Obj
   end
 
   def ==(other)
-    if (other.db.nil? && !@db.nil?) || (!other.db.nil? && @db.nil?)
+    if (other.db.nil? && !self.db.nil?) || (!other.db.nil? && self.db.nil?)
       return false
-    elsif other.db && @db
-      other.id == @id
+    elsif other.db && self.db
+      other.db_id == self.db_id
     else
       other.attrs == @attrs
     end
@@ -133,7 +138,9 @@ class Obj
                     polymorphic: false,
                     as: nil,
                     through: nil,
-                    through_next: nil)
+                    through_next: nil,
+                    through_back: nil,
+                    through_type_sym: nil)
     @relationships ||= {}
     relationship =
       Relationship.new(
@@ -146,7 +153,9 @@ class Obj
         polymorphic: polymorphic,
         as: as,
         through: through,
-        through_next: through_next
+        through_next: through_next,
+        through_back: through_back,
+        through_type_sym: through_type_sym
       )
     @relationships[rel_name] = relationship
   end
@@ -165,6 +174,11 @@ class Obj
     @@classes ||= {}
     @@classes
   end
+
+  def self.register_class(obj_class)
+    classes[obj_class.get_type_sym] = obj_class
+  end
+
 
   def self.indexes
     @indexes
@@ -233,30 +247,30 @@ class Obj
     return false
   end
 
-  def relationship_read(sym)
+  def relationship_read(sym, rel_adapter: @rel_adapter)
     rel = relationships[sym]
     if rel.rel_type == :belongs_to
-      return [true, belongs_to_read(rel)]
+      return [true, belongs_to_read(rel, rel_adapter: rel_adapter)]
     elsif rel.rel_type == :has_many
       if rel.through
-        return [true, has_many_through_read(rel)]
+        return [true, has_many_through_read(rel, rel_adapter: rel_adapter)]
       else
-        return [true, has_many_read(rel)]
+        return [true, has_many_read(rel, rel_adapter: rel_adapter)]
       end
     end
     return [false, nil]
   end
 
-  def belongs_to_read(rel, use_cache: true)
-    @rel_adapter.belongs_to_read(rel, use_cache: use_cache)
+  def belongs_to_read(rel, use_cache: true, rel_adapter: @rel_adapter)
+    rel_adapter.belongs_to_read(rel, use_cache: use_cache)
   end
 
-  def has_many_read(rel, use_cache: true)
-    @rel_adapter.has_many_read(rel)
+  def has_many_read(rel, use_cache: true, rel_adapter: @rel_adapter)
+    rel_adapter.has_many_read(rel)
   end
 
-  def has_many_through_read(rel, use_cache: true)
-    @rel_adapter.has_many_through_read(rel)
+  def has_many_through_read(rel, use_cache: true, rel_adapter: @rel_adapter)
+    rel_adapter.has_many_through_read(rel)
   end
 
   def attr_read(sym)

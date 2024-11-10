@@ -9,29 +9,40 @@ class A < Obj
   end
 end
 
+# Tag
 class B < Obj
   belongs_to :a, :a_id, inverse_of: :bs
+  has_many :cs, :c,  :b_id, inverse_of: :b
+  has_many :ds, nil, nil, through: :cs, through_next: :dable
   def initialize(z)
     super(:b, {z: z})
   end
 end
 
+# Tagging
 class C < Obj
+  belongs_to :b, :b_id, inverse_of: :cs
   belongs_to :dable, :dable_id, polymorphic: true, inverse_of: :cs
   def initialize(x)
     super(:c, {x: x})
   end
 end
 
+# Taggable #1
 class D1 < Obj
   has_many :cs, :c, :dable_id, as: :dable
+  has_many :bs, :b, nil, through: :cs,
+           through_next: :b, through_back: :dable, through_type_sym: :c
   def initialize(y)
     super(:d1, {y: y})
   end
 end
 
+# Taggable #2
 class D2 < Obj
   has_many :cs, :c, :dable_id, as: :dable
+  has_many :bs, :b, nil, through: :cs,
+           through_next: :b, through_back: :dable, through_type_sym: :c
   def initialize(z)
     super(:d2, {z: z})
   end
@@ -121,6 +132,59 @@ describe Obj do
       a1 = A.new(1,2)
       a2 = a1.dup
       expect(a1.changes).to eq(a2.changes)
+    end
+  end
+
+  describe '==' do
+    context 'when there is no db_id' do
+      it 'matches on object_id if db_id is nil' do
+        a1 = A.new(1,2)
+        expect(a1).to eq(a1)
+      end
+
+      it 'does match on attributes' do
+        a1 = A.new(1,2)
+        a2 = A.new(1,2)
+        expect(a1).to eq(a2)
+      end
+    end
+
+    context 'when one entry has a db_id and another doesnt' do
+      it 'when the first has a db_id value and the second is nil' do
+        a1 = A.new(1,2)
+        allow(a1).to receive(:db_id).and_return(1)
+        a2 = A.new(2,3)
+        allow(a2).to receive(:db_id).and_return(nil)
+        expect(a1).not_to eq(a2)
+      end
+
+      it 'when the first db_id is nil and the second has a db_id value' do
+        a1 = A.new(1,2)
+        allow(a1).to receive(:db_id).and_return(nil)
+        a2 = A.new(2,3)
+        allow(a2).to receive(:db_id).and_return(1)
+        expect(a1).not_to eq(a2)
+      end
+    end
+
+    context 'when both entries have a db_id' do
+      it 'does match when db_ids match' do
+        a1 = A.new(1,2)
+        allow(a1).to receive(:db).and_return(1)
+        allow(a1).to receive(:db_id).and_return(1)
+        a2 = A.new(2,3)
+        allow(a2).to receive(:db).and_return(1)
+        allow(a2).to receive(:db_id).and_return(1)
+        expect(a1).to eq(a2)
+      end
+
+      it 'doesnt match when db_ids dont match' do
+        a1 = A.new(1,2)
+        allow(a1).to receive(:db_id).and_return(1)
+        a2 = A.new(2,3)
+        allow(a2).to receive(:db_id).and_return(2)
+        expect(a1).not_to eq(a2)
+      end
     end
   end
 
@@ -260,7 +324,6 @@ describe Obj do
               expect(@b2.changes.for_sym(:a_id)).to be_nil
             end
           end
-
         end
 
         it 'transfers from one owner to another if added to other owner' do
@@ -308,6 +371,22 @@ describe Obj do
           c2.dable = d
 
           expect(d.cs).to match_array([c1, c2])
+        end
+
+        it 'allows assigns to has_many throughs' do
+          b1 = B.new(0)
+          b2 = B.new(1)
+          b3 = B.new(2)
+          c1 = C.new(3)
+          c2 = C.new(4)
+          d1 = D1.new(5)
+          d2 = D2.new(6)
+
+          d1.bs = [b1, b2]
+          d2.bs = [b2, b3]
+
+          expect(d1.bs).to match_array([b1, b2])
+          expect(d2.bs).to match_array([b2, b3])
         end
       end
 

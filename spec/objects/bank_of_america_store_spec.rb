@@ -82,6 +82,7 @@ describe Obj::BankOfAmericaStore do
 
     it 'tags the charges appropriately' do
       kindle_charge = db.objs[:charge].values.find{|bp| bp.remote_id == '24692163192100636893179'}
+      x = kindle_charge.tags
       expect(kindle_charge.tags.map(&:name)).to match_array(['steve', 'expenses'])
 
       steve = db.objs[:tag].values.find{|tag| tag.name == 'steve'}

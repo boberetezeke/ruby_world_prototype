@@ -1,13 +1,13 @@
 class Relationship
   attr_reader :rel_type, :name, :foreign_key, :foreign_type
   attr_reader :target_type_sym, :inverse_of, :index, :polymorphic
-  attr_reader :through, :through_next
+  attr_reader :through, :through_next, :through_back, :through_type_sym
   def initialize(rel_type, rel_name, foreign_key, target_type_sym,
                  inverse_of: nil,
                  classes: nil,
                  polymorphic: nil,
                  as: nil,
-                 through: nil, through_next: nil)
+                 through: nil, through_next: nil, through_back: nil, through_type_sym: nil)
     @rel_type = rel_type
     @name = rel_name
     @foreign_key = foreign_key
@@ -20,10 +20,19 @@ class Relationship
     @index = Index.new if @rel_type == :has_many
     @through = through
     @through_next = through_next
+    @through_back = through_back
+    @through_type_sym = through_type_sym
   end
 
   def reset_index
     @index&.reset
+  end
+
+  def new_through_obj(obj, source)
+    through_obj = Obj.new_blank_obj(@through_type_sym)
+    through_obj.send("#{@through_next}=", obj)
+    through_obj.send("#{@through_back}=", source)
+    through_obj
   end
 
   def inverse(obj)

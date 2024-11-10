@@ -20,11 +20,16 @@ class Obj::DatabaseAdapter::InMemoryRelationship
   end
 
   def has_many_read(rel)
-    HasManyArray.new(@obj, rel, rel.index[@obj.id])
+    if rel.through
+      has_many_through_read(rel)
+    else
+      HasManyArray.new(@obj, rel, rel.index[@obj.id])
+    end
   end
 
   def has_many_through_read(rel)
-    complete, has_many_array = @obj.relationship_read(rel.through)
+    # TODO: this doesn't work well with caching
+    complete, has_many_array = @obj.relationship_read(rel.through, rel_adapter: self)
     return [false, nil] unless complete
     has_many_array.to_a.map do |obj|
       val_or_vals = obj.send(rel.through_next)
@@ -43,14 +48,25 @@ class Obj::DatabaseAdapter::InMemoryRelationship
     #   obj.send("#{rel.name}=", nil)
     # end
 
-    # nil out currently assiged foreign keys
-    has_many_read(rel).each do |obj|
-      obj.send("#{rel.inverse(obj).name}=", nil)
-    end
+    if rel.through
+      through_type_sym = @obj.relationships[rel.through].target_type_sym
+      foreign_key =  Obj.classes[through_type_sym].relationships[rel.through_next].foreign_key
+      current_objs = @obj.relationships[rel.through].index[@obj.id]
+      if !rhs.empty?
+        puts 'hello'
+      end
+      (rhs - current_objs).each { |rh| rel.new_through_obj(rh, @obj) }
+      #(rsh - current_objs).each { |rh| }
+    else
+      # nil out currently assigned foreign keys
+      has_many_read(rel).each do |obj|
+        obj.send("#{rel.inverse(obj).name}=", nil)
+      end
 
-    # set new values
-    rhs.each do |obj|
-      obj.send("#{rel.inverse(@obj).name}=", @obj)
+      # set new values
+      rhs.each do |obj|
+        obj.send("#{rel.inverse(@obj).name}=", @obj)
+      end
     end
   end
 

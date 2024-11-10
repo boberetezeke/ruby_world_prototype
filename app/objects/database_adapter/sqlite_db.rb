@@ -317,6 +317,35 @@ class Obj
       def obj_table(obj)
         @db.from(obj.type_sym)
       end
+
+      def polymorphic_relation_str(objable, reciprocal)
+        <<-EOT
+          many_to_one :attachable, reciprocal: :assets, reciprocal_type: :one_to_many,
+            setter: (lambda do |attachable|
+              self[:attachable_id] = (attachable.pk if attachable)
+              self[:attachable_type] = (attachable.class.name if attachable)
+            end),
+            dataset: (proc do
+              klass = attachable_type.constantize
+              klass.where(klass.primary_key=>attachable_id)
+            end),
+            eager_loader: (lambda do |eo|
+              id_map = {}
+              eo[:rows].each do |asset|
+                asset.associations[:attachable] = nil 
+                ((id_map[asset.attachable_type] ||= {})[asset.attachable_id] ||= []) << asset
+              end
+              id_map.each do |klass_name, id_map|
+                klass = klass_name.constantize
+                klass.where(klass.primary_key=>id_map.keys).all do |attach|
+                  id_map[attach.pk].each do |asset|
+                    asset.associations[:attachable] = attach
+                  end
+                end
+              end
+            end)
+        EOT
+      end
     end
   end
 end

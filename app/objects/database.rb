@@ -35,6 +35,7 @@ class Obj::Database
   end
 
   def register_class(obj_class)
+    Obj.register_class(obj_class)
     @database_adapter.register_class(obj_class)
   end
 
