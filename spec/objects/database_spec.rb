@@ -24,6 +24,68 @@ class Obj::B < Obj
   end
 end
 
+# Tagging
+class Obj::C < Obj
+  type_sym :c
+  belongs_to :b, :b_id, inverse_of: :cs
+  belongs_to :dable, :dable_id, polymorphic: true, inverse_of: :cs
+  def initialize(x)
+    super(:c, {x: x})
+  end
+end
+
+# Taggable #1
+class Obj::D1 < Obj
+  type_sym :d1
+  has_many :cs, :c, :dable_id, as: :dable
+  has_many :bs, :b, nil, through: :cs,
+           through_next: :b, through_back: :dable, through_type_sym: :c
+  def initialize(y)
+    super(:d1, {y: y})
+  end
+end
+
+# Taggable #2
+class Obj::D2 < Obj
+  type_sym :d2
+  has_many :cs, :c, :dable_id, as: :dable
+  has_many :bs, :b, nil, through: :cs,
+           through_next: :b, through_back: :dable, through_type_sym: :c
+  def initialize(z)
+    super(:d2, {z: z})
+  end
+end
+
+class Obj::E < Obj
+  type_sym :e
+  has_many :fs, :f, :e_id, inverse_of: :e
+  has_many :gs, nil, nil, through: :fs, through_next: :g, through_back: :e, through_type_sym: :f
+
+  def initialize(e)
+    super(:e, {e: e})
+  end
+end
+
+# join table
+class Obj::F < Obj
+  type_sym :f
+  belongs_to :e, :e_id, inverse_of: :fs
+  belongs_to :g, :g_id, inverse_of: :fs
+
+  def initialize(f)
+    super(:f, {f: f})
+  end
+end
+
+class Obj::G < Obj
+  type_sym :g
+  has_many :fs, :f, :g_id, inverse_of: :g
+
+  def initialize(g)
+    super(:g, {g: g})
+  end
+end
+
 class CreateA
   def self.up(database)
     database.create_table(:a, {x: :string, y: :string})
@@ -44,6 +106,66 @@ class CreateB
   end
 end
 
+class CreateC
+  def self.up(database)
+    database.create_table(:c, {x: :integer, b_id: :integer, dable_id: :integer, dable_type: :string})
+  end
+
+  def self.down(database)
+    database.drop_table(:c)
+  end
+end
+
+class CreateD1
+  def self.up(database)
+    database.create_table(:d1, {y: :integer, c_id: :integer})
+  end
+
+  def self.down(database)
+    database.drop_table(:d1)
+  end
+end
+
+class CreateD2
+  def self.up(database)
+    database.create_table(:d2, {z: :integer, c_id: :integer})
+  end
+
+  def self.down(database)
+    database.drop_table(:d2)
+  end
+end
+
+class CreateE
+  def self.up(database)
+    database.create_table(:e, {e: :integer, c_id: :integer})
+  end
+
+  def self.down(database)
+    database.drop_table(:e)
+  end
+end
+
+class CreateF
+  def self.up(database)
+    database.create_table(:f, {f: :integer, e_id: :integer, g_id: :integer})
+  end
+
+  def self.down(database)
+    database.drop_table(:f)
+  end
+end
+
+class CreateG
+  def self.up(database)
+    database.create_table(:g, {g: :integer})
+  end
+
+  def self.down(database)
+    database.drop_table(:g)
+  end
+end
+
 describe Obj::Database do
   subject { Obj::Database.new }
 
@@ -53,21 +175,40 @@ describe Obj::Database do
     end
 
     context 'when loading after save' do
-      it 'load and save' do
+      let(:database) { described_class.load_or_reload(nil) }
+      before do
         a = Obj::A.new(1,2)
         b = Obj::B.new(3)
         b.a = a
 
+        e = Obj::E.new(1)
+        f = Obj::F.new(2)
+        g = Obj::G.new(3)
+        f.e = e
+        f.g = g
+
         subject.add_obj(a)
         subject.add_obj(b)
+        subject.add_obj(e)
+        subject.add_obj(f)
+        subject.add_obj(g)
 
         subject.save
-        database = described_class.load_or_reload(nil)
+      end
 
+      it 'has_many / belongs_to relationships reload correctly' do
         a2 = database.objs[:a].values.first
 
         expect(a2.bs.to_a.size).to eq(1)
         expect(a2.bs.to_a.first.z).to eq(3)
+      end
+
+      it 'has_many through relationship' do
+        e2 = database.objs[:e].values.first
+        g2 = database.objs[:g].values.first
+
+        expect(e2.gs).to eq([g2])
+        expect(g2.gs).to eq([e2])
       end
     end
   end
@@ -76,11 +217,15 @@ describe Obj::Database do
     before do
       allow(Obj::Database).to receive(:database_adapter).and_return(Obj::DatabaseAdapter::SqliteDb)
       subject.connect
-      Obj::Database.migrate([CreateA, CreateB], subject)
+      Obj::Database.migrate([
+          CreateA, CreateB, CreateC, CreateD1, CreateD2, CreateE, CreateF, CreateG
+        ], subject)
     end
 
     after do
-      Obj::Database.rollback([CreateB, CreateA], subject)
+      Obj::Database.rollback([
+        CreateA, CreateB, CreateC, CreateD1, CreateD2, CreateE, CreateF, CreateG
+      ], subject)
     end
 
     #
@@ -97,12 +242,20 @@ describe Obj::Database do
     #
     # SequelA.all.first.sequel_bs_dataset.where(z: '3').to_a
     #
-
     context 'when loading after save' do
-      it 'saves only a' do
-        puts "at beginning of 'saves only a'"
-        a = Obj::A.new(1,2)
+      before do
         subject.register_class(Obj::A)
+        subject.register_class(Obj::B)
+        subject.register_class(Obj::C)
+        subject.register_class(Obj::D1)
+        subject.register_class(Obj::D2)
+        subject.register_class(Obj::E)
+        subject.register_class(Obj::F)
+        subject.register_class(Obj::G)
+      end
+
+      it 'saves only a' do
+        a = Obj::A.new(1,2)
         subject.add_obj(a)
 
         subject.save
@@ -117,9 +270,6 @@ describe Obj::Database do
         puts "at beginning of 'loads and saves a then b'"
         a = Obj::A.new(1,2)
         b = Obj::B.new(3)
-
-        subject.register_class(Obj::A)
-        subject.register_class(Obj::B)
 
         b.a = a
 
@@ -140,9 +290,6 @@ describe Obj::Database do
         a = Obj::A.new(1,2)
         b = Obj::B.new(3)
 
-        subject.register_class(Obj::A)
-        subject.register_class(Obj::B)
-
         b.a = a
 
         subject.add_obj(b)
@@ -157,6 +304,28 @@ describe Obj::Database do
         puts "at end of 'loads and saves b then a'"
       end
 
+      it 'does handle many through' do
+        e = Obj::E.new(1)
+        f = Obj::F.new(2)
+        g = Obj::G.new(3)
+        f.e = e
+        f.g = g
+
+        subject.add_obj(e)
+        subject.add_obj(f)
+        subject.add_obj(g)
+
+        subject.save
+
+        e2 = subject.find_by(:e, {id: e.db_id})
+        f2 = subject.find_by(:f, {id: f.db_id})
+        g2 = subject.find_by(:g, {id: g.db_id})
+
+        expect(e2.fs).to eq([f2])
+        expect(g2.fs).to eq([f2])
+        expect(e2.gs).to eq([g2])
+        expect(g2.es).to eq([e2])
+      end
     end
   end
 end
