@@ -42,7 +42,8 @@ class Obj::DatabaseAdapter::InMemoryRelationship
   end
 
   def has_many_assign(rel, rhs)
-    raise 'has_many relationships can only accept array values' unless rhs.is_a?(Array)
+    raise 'has_many relationships can only accept array values' unless rhs.respond_to?(:to_ary)
+    rhs = rhs.to_a
     # re-assign index to contain rhs values
     # rel.index[@obj.id].each do |obj|
     #   obj.send("#{rel.name}=", nil)
@@ -55,7 +56,9 @@ class Obj::DatabaseAdapter::InMemoryRelationship
       if !rhs.empty?
         puts 'hello'
       end
-      (rhs - current_objs).each { |rh| rel.new_through_obj(rh, @obj) }
+      (rhs - current_objs).each do |rh|
+        rel.new_through_obj(rh, @obj)
+      end
       #(rsh - current_objs).each { |rh| }
     else
       # nil out currently assigned foreign keys
@@ -64,7 +67,7 @@ class Obj::DatabaseAdapter::InMemoryRelationship
       end
 
       # set new values
-      rhs.each do |obj|
+      rhs.to_a.each do |obj|
         obj.send("#{rel.inverse(@obj).name}=", @obj)
       end
     end

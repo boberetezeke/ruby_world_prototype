@@ -117,7 +117,7 @@ class Obj
     @type_sym
   end
 
-  def self.belongs_to(rel_name, foreign_key, inverse_of: nil, polymorphic: nil)
+  def self.belongs_to(rel_name, foreign_key, inverse_of: nil, polymorphic: nil, poly_classes: [])
     @relationships ||= {}
     relationship = Relationship.new(
       :belongs_to,
@@ -126,6 +126,7 @@ class Obj
       rel_name,
       inverse_of: inverse_of,
       polymorphic: polymorphic,
+      poly_classes: poly_classes,
       classes: classes
     )
     @relationships[rel_name] = relationship
@@ -198,6 +199,9 @@ class Obj
     self.class.relationships
   end
 
+  def classes
+    self.class.classes
+  end
 
   def belongs_to_relationships
     relationships.select do |_name, relationship|

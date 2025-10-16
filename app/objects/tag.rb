@@ -1,6 +1,7 @@
 class Obj::Tag < Obj
   has_many :taggings, :tagging, :tag_id, inverse_of: :tag
-  has_many :objs, nil, nil, through: :taggings, through_next: :taggable
+  has_many :objs, nil, nil, through: :taggings,
+           through_back: :tag, through_next: :taggable, through_type_sym: :tagging
 
   type_sym :tag
 

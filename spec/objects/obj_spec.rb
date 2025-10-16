@@ -254,7 +254,7 @@ describe Obj do
           end
 
           it 'creates a change on the b object' do
-            expect(@b.changes.for_sym(:a_id)).to eq(Obj::Change.new(:a_id, nil, @a.id))
+            expect(@b3.changes.for_sym(:a_id)).to eq(Obj::Change.new(:a_id, nil, @a.id))
           end
         end
 

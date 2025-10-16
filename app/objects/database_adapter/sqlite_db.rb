@@ -2,6 +2,24 @@ require 'sequel'
 
 class Obj
   module DatabaseAdapter
+    class PolymorphicRelation
+      def initialize(database, has_many_relation)
+        @database = database
+        @has_many_relation = has_many_relation
+      end
+
+      def to_ary
+        to_a
+      end
+
+      def to_a
+        @has_many_relation.to_a.map do |tagging|
+          o = tagging.taggable
+          o
+        end
+      end
+    end
+
     class SqliteDb
       class Relation
         attr_reader :type_sym
@@ -145,18 +163,34 @@ class Obj
       end
 
       def belongs_to_read(obj, rel)
-        db_obj = obj.db_obj.send("sequel_#{rel.name}".to_sym)
+        if rel.polymorphic
+          # need to use the appropriate belongs_to relationship based on obj.db_obj.taggable_type
+          # Obj::Charge ==> obj.db_obj.charge
+          target_type_sym = eval(obj.db_obj.taggable_type).get_type_sym
+          db_obj = obj.db_obj.send("sequel_#{target_type_sym}".to_sym)
+        else
+          db_obj = obj.db_obj.send("sequel_#{rel.name}".to_sym)
+          target_type_sym = rel.target_type_sym
+        end
         return nil unless db_obj
-        wrap_obj(db_obj, rel.target_type_sym)
+        wrap_obj(db_obj, target_type_sym)
       end
 
       def has_many_read(obj, rel)
-        sequel_objs = obj.db_obj.send("sequel_#{rel.name}")
-        sequel_objs.map{ |sequel_obj| wrap_obj(sequel_obj, rel.target_type_sym) }
+        if rel.rel_type == :has_many && rel.through_next == :taggable
+          PolymorphicRelation.new(self, obj.taggings)
+        else
+          sequel_objs = obj.db_obj.send("sequel_#{rel.name}")
+          sequel_objs.map{ |sequel_obj| wrap_obj(sequel_obj, rel.target_type_sym) }
+        end
       end
 
       def sequel_klass(obj)
-        @type_sym_to_sequel_class[obj.type_sym]
+        sequel_klass_from_type_sym(obj.type_sym)
+      end
+
+      def sequel_klass_from_type_sym(type_sym)
+        @type_sym_to_sequel_class[type_sym]
       end
 
       def db_attrs(obj, save_belongs_tos: true)
@@ -262,7 +296,13 @@ class Obj
         rels = klass.relationships.map do |_sym, rel|
           case rel.rel_type
           when :belongs_to
-            "many_to_one :sequel_#{rel.name}, key: :#{rel.foreign_key}"
+            if rel.polymorphic
+              rel.poly_classes.map do |poly_class|
+                "many_to_one :sequel_#{poly_class}, key: :#{rel.foreign_key}"
+              end
+            else
+              "many_to_one :sequel_#{rel.name}, key: :#{rel.foreign_key}"
+            end
           when :has_many
             if rel.through
               through = klass.relationships[rel.through]
@@ -275,7 +315,7 @@ class Obj
               "one_to_many :sequel_#{rel.name}, key: :#{rel.foreign_key}"
             end
           end
-        end
+        end.flatten
 
         class_def_str =
           "class " + class_name +
