@@ -1,5 +1,5 @@
 class Obj::Database
-  attr_accessor :tag_context
+  attr_accessor :tag_context, :database_adapter
 
   def self.database_adapter
     Obj::DatabaseAdapter::InMemoryDb

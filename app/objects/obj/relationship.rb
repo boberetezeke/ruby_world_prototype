@@ -39,9 +39,15 @@ class Relationship
 
   def inverse(obj)
     if @inverse_of
-      target_type_sym = @polymorphic ? obj.send(@foreign_type) : @target_type_sym
+      target_type_sym = @polymorphic ? polymorphic_type_sym(obj) : @target_type_sym
       return @classes[target_type_sym].relationships[@inverse_of]
     end
     nil
+  end
+
+  def polymorphic_type_sym(obj)
+    foreign_type = obj.send(@foreign_type)
+    return foreign_type if foreign_type.is_a?(Symbol)
+    obj.classes.invert[obj.send(@foreign_type)]
   end
 end

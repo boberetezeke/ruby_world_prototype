@@ -82,6 +82,7 @@ class Obj
         @database = database
         @type_sym_to_sequel_class = {}
         @sequel_class_to_type_sym = {}
+        @class_to_type_sym = {}
       end
 
       def info
@@ -233,6 +234,7 @@ class Obj
       end
 
       def rem_obj(obj)
+        obj.db_obj.destroy
       end
 
       def update_obj(obj)
@@ -250,12 +252,28 @@ class Obj
 
       def where_by(type_sym, finder_hash)
         klass = @type_sym_to_sequel_class[type_sym]
-        db_objs = klass.where(finder_hash)
+        db_objs = klass.where(convert_finder_hash(type_sym, finder_hash))
         db_objs.map { |db_obj| wrap_obj(db_obj, type_sym) }
       end
 
       def find_by(type_sym, finder_hash)
         where_by(type_sym, finder_hash).first
+      end
+
+      def convert_finder_hash(type_sym, finder_hash)
+        klass = type_sym_to_class(type_sym)
+        fh = Hash[
+          finder_hash.map do |k,v|
+            if klass.relationships[k]
+              [klass.relationships[k].foreign_key, v.db_obj.id]
+            elsif v.is_a?(Symbol)
+              [k, type_sym_to_class(v).to_s]
+            else
+              [k, v]
+            end
+          end
+        ]
+        fh
       end
 
       def connect
@@ -280,6 +298,7 @@ class Obj
         sequel_class = create_sequel_class(obj_class)
         @type_sym_to_sequel_class[obj_class.get_type_sym] = sequel_class
         @sequel_class_to_type_sym[sequel_class.to_s] = obj_class.get_type_sym
+        @class_to_type_sym[obj_class.to_s] = obj_class.get_type_sym
       end
 
       def create_sequel_class(klass)
@@ -335,14 +354,26 @@ class Obj
       end
 
       def wrap_obj(sequel_obj, type_sym)
-        obj = type_sym_to_class(type_sym).allocate
+        klass = type_sym_to_class(type_sym)
+        obj = klass.allocate
         attrs = sequel_obj.values.reject{|k,_| k == :id}
+        translate_polymorphic_values(klass, attrs)
         obj.reset(type_sym, SecureRandom.hex, attrs, rel_adapter: Obj::DatabaseAdapter::SqliteRelationship.new(obj, self))
         obj.added_to_db(
           @database,
           db_obj: sequel_obj,
           rel_adapter: Obj::DatabaseAdapter::SqliteRelationship.new(obj, self))
         obj
+      end
+
+      # translate class names like Obj::Charge to type sym, looke :charge
+      def translate_polymorphic_values(klass, attrs)
+        klass.relationships.each do |k, rel|
+          if rel.polymorphic
+            foreign_type_value = attrs[rel.foreign_type]
+            attrs[rel.foreign_type] = @class_to_type_sym[foreign_type_value]
+          end
+        end
       end
 
       def get_objs(sym)

@@ -118,7 +118,8 @@ class Obj::BankOfAmericaStore < Obj::Store
 
   def remove_tags(tags, db_charge)
     tags.each do |tag|
-      tagging = @db.find_by(:tagging, {tag_id: tag.id, taggable_type: :charge, taggable_id: db_charge.id})
+      # tagging = @db.find_by(:tagging, {tag_id: tag.id, taggable_type: :charge, taggable_id: db_charge.id})
+      tagging = @db.find_by(:tagging, {tag: tag, taggable_type: :charge, taggable: db_charge})
       @db.rem_obj(tagging)
       tagging.tag = nil
       tagging.taggable = nil

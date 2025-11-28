@@ -53,13 +53,14 @@ class Obj::DatabaseAdapter::InMemoryRelationship
       through_type_sym = @obj.relationships[rel.through].target_type_sym
       foreign_key =  Obj.classes[through_type_sym].relationships[rel.through_next].foreign_key
       current_objs = @obj.relationships[rel.through].index[@obj.id]
-      if !rhs.empty?
-        puts 'hello'
+
+      # convert both the rhs to ids and the join objects to ids and compare them
+      rhs_id_hash = Hash[rhs.map{|rh| [rh.id, rh]}]
+      current_objs_ids = current_objs.map{|join_obj| join_obj.send(foreign_key)}
+      new_ids = rhs_id_hash.keys - current_objs_ids
+      new_ids.each do |id|
+        rel.new_through_obj(rhs_id_hash[id], @obj)
       end
-      (rhs - current_objs).each do |rh|
-        rel.new_through_obj(rh, @obj)
-      end
-      #(rsh - current_objs).each { |rh| }
     else
       # nil out currently assigned foreign keys
       has_many_read(rel).each do |obj|
