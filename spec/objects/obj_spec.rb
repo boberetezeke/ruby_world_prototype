@@ -253,8 +253,19 @@ describe Obj do
             expect(@a.bs.to_a).to eq([@b4, @b5])
           end
 
-          it 'creates a change on the b object' do
-            expect(@b3.changes.for_sym(:a_id)).to eq(Obj::Change.new(:a_id, nil, @a.id))
+          it 'creates a no change on the b3 object' do
+            # creates no change because @be.a_id went from nil to @a.id back to nil
+            expect(@b3.changes.for_sym(:a_id)).to be_nil
+          end
+
+          it 'creates a no change on the b4 object' do
+            # failing because @be.a_id went from nil to @a.id back to nil
+            expect(@b4.changes.for_sym(:a_id)).to eq(Obj::Change.new(:a_id, nil, @a.id))
+          end
+
+          it 'creates a no change on the b5 object' do
+            # failing because @be.a_id went from nil to @a.id back to nil
+            expect(@b5.changes.for_sym(:a_id)).to eq(Obj::Change.new(:a_id, nil, @a.id))
           end
         end
 
@@ -320,8 +331,12 @@ describe Obj do
               expect(@a.bs).to eq([@b2])
             end
 
-            it 'creates a change on the b2 object' do
-              expect(@b2.changes.for_sym(:a_id)).to be_nil
+            it 'removes change for b1 object' do
+              expect(@b1.changes.for_sym(:a_id)).to be_nil
+            end
+
+            it 'change on the b2 object' do
+              expect(@b2.changes.for_sym(:a_id)).to eq(Obj::Change.new(:a_id, nil, @a.id))
             end
           end
         end
