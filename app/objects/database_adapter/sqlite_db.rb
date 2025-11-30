@@ -3,8 +3,9 @@ require 'sequel'
 class Obj
   module DatabaseAdapter
     class PolymorphicRelation
-      def initialize(database, has_many_relation)
+      def initialize(database, join_rel, has_many_relation)
         @database = database
+        @join_rel = join_rel
         @has_many_relation = has_many_relation
       end
 
@@ -13,8 +14,8 @@ class Obj
       end
 
       def to_a
-        @has_many_relation.to_a.map do |tagging|
-          o = tagging.taggable
+        @has_many_relation.to_a.map do |join_table_row|
+          o = join_table_row.send(@join_rel.through_next)
           o
         end
       end
@@ -178,8 +179,8 @@ class Obj
       end
 
       def has_many_read(obj, rel)
-        if rel.rel_type == :has_many && rel.through_next == :taggable
-          PolymorphicRelation.new(self, obj.taggings)
+        if rel.rel_type == :has_many && rel.through_next
+          PolymorphicRelation.new(self, rel, obj.send(rel.through))
         else
           sequel_objs = obj.db_obj.send("sequel_#{rel.name}")
           sequel_objs.map{ |sequel_obj| wrap_obj(sequel_obj, rel.target_type_sym) }

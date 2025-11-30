@@ -80,6 +80,7 @@ end
 class Obj::G < Obj
   type_sym :g
   has_many :fs, :f, :g_id, inverse_of: :g
+  has_many :es, nil, nil, through: :fs, through_next: :e, through_back: :g, through_type_sym: :f
 
   def initialize(g)
     super(:g, {g: g})
