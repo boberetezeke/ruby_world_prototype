@@ -209,7 +209,7 @@ describe Obj::Database do
         g2 = database.objs[:g].values.first
 
         expect(e2.gs).to eq([g2])
-        expect(g2.gs).to eq([e2])
+        expect(g2.es).to eq([e2])
       end
     end
   end

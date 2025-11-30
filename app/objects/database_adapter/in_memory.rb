@@ -60,7 +60,9 @@ class Obj
         database_adapter = self.new(database)
         return database_adapter unless File.exist?(db_path)
 
-        yml = File.open(db_path) { |f| YAML.load(f) }
+        # TODO: replace unsafe_load with safe_load
+        # YAML.safe_load_file(db_path, permitted_classes: [])
+        yml = YAML.unsafe_load_file(db_path)
         database_adapter.deserialize(yml)
         database_adapter.reindex
         database_adapter = migrate(Migrations.migrations, database_adapter)
