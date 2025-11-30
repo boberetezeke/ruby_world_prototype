@@ -135,7 +135,9 @@ class Obj
         objs_of_type = @objs[obj.type_sym] || {}
         @objs[obj.type_sym] = objs_of_type if @objs[obj.type_sym].nil?
         @changes.push({change_type: :add_obj, obj: obj})
-        obj.added_to_db(self)
+        # there is no separate db object, so the db object is itself
+        # obj.db_id == obj.id
+        obj.added_to_db(self, db_obj: obj)
 
         objs_of_type[obj.id] = obj
         obj

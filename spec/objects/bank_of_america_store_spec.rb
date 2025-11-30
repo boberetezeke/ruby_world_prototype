@@ -40,7 +40,8 @@ describe Obj::BankOfAmericaStore do
     end
 
     before do
-      allow(Obj::Database).to receive(:database_adapter).and_return(Obj::DatabaseAdapter::SqliteDb)
+      # allow(Obj::Database).to receive(:database_adapter).and_return(Obj::DatabaseAdapter::SqliteDb)
+      allow(Obj::Database).to receive(:database_adapter).and_return(Obj::DatabaseAdapter::InMemoryDb)
       db.connect
       Obj::Database.migrate(migrations, db)
       db.register_class(Obj::Charge)
