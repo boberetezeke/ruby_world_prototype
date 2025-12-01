@@ -341,7 +341,7 @@ class Obj
           "class " + class_name +
             " < Sequel::Model(:#{type_sym});" +
             rels.join(";") + ";end"
-        puts "class def: #{class_def_str}"
+        # puts "class def: #{class_def_str}"
 
         [class_def_str, class_name]
       end

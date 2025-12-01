@@ -264,11 +264,11 @@ describe Obj::Database do
         a2 = subject.find_by(:a, {id: a.db_id})
 
         expect(a2.x).to eq('1')
-        puts "at end of 'saves only a'"
+        # puts "at end of 'saves only a'"
       end
 
       it 'loads and saves a then b' do
-        puts "at beginning of 'loads and saves a then b'"
+        # puts "at beginning of 'loads and saves a then b'"
         a = Obj::A.new(1,2)
         b = Obj::B.new(3)
 
@@ -283,11 +283,11 @@ describe Obj::Database do
 
         expect(a2.bs.to_a.size).to eq(1)
         expect(a2.bs.to_a.first.z).to eq(3)
-        puts "at end of 'loads and saves a then b'"
+        # puts "at end of 'loads and saves a then b'"
       end
 
       it 'loads and saves b then a' do
-        puts "at beginning of 'loads and saves b then a'"
+        # puts "at beginning of 'loads and saves b then a'"
         a = Obj::A.new(1,2)
         b = Obj::B.new(3)
 
@@ -302,7 +302,7 @@ describe Obj::Database do
 
         expect(a2.bs.to_a.size).to eq(1)
         expect(a2.bs.to_a.first.z).to eq(3)
-        puts "at end of 'loads and saves b then a'"
+        # puts "at end of 'loads and saves b then a'"
       end
 
       it 'does handle many through' do
