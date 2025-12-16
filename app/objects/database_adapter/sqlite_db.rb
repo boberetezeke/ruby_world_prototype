@@ -73,7 +73,7 @@ class Obj
         'test.sqlite'
       end
 
-      def self.load_or_reload(database)
+      def self.load_or_reload(database, _database_adapter)
         new(database)
       end
 

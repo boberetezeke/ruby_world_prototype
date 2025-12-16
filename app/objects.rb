@@ -8,6 +8,7 @@ load "#{path}/objects/collection.rb"
 
 load "#{path}/objects/database.rb"
 load "#{path}/objects/database_adapter/in_memory_db.rb"
+load "#{path}/objects/database_adapter/sqlite_db.rb"
 load "#{path}/objects/tag.rb"
 
 load "#{path}/objects/call.rb"

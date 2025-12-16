@@ -168,15 +168,15 @@ class CreateG
 end
 
 describe Obj::Database do
-  subject { Obj::Database.new }
+  subject {
+    Obj::Database.new(database_adapter_class: database_adapter_class)
+  }
 
   context 'when using in memory database' do
-    before do
-      allow(Obj::Database).to receive(:database_adapter).and_return(Obj::DatabaseAdapter::InMemoryDb)
-    end
+    let(:database_adapter_class) { Obj::DatabaseAdapter::InMemoryDb }
 
     context 'when loading after save' do
-      let(:database) { described_class.load_or_reload(nil) }
+      let(:database) { described_class.load_or_reload(nil, database_filename: 'test_db.yml') }
       before do
         a = Obj::A.new(1,2)
         b = Obj::B.new(3)
@@ -215,8 +215,9 @@ describe Obj::Database do
   end
 
   context 'when using in sqlite database' do
+    let(:database_adapter_class) { Obj::DatabaseAdapter::SqliteDb }
     before do
-      allow(Obj::Database).to receive(:database_adapter).and_return(Obj::DatabaseAdapter::SqliteDb)
+      # allow(Obj::Database).to receive(:database_adapter).and_return(Obj::DatabaseAdapter::SqliteDb)
       subject.connect
       Obj::Database.migrate([
           CreateA, CreateB, CreateC, CreateD1, CreateD2, CreateE, CreateF, CreateG

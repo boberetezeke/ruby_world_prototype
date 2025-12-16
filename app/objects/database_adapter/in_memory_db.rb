@@ -46,14 +46,14 @@ class Obj
         File.join(ENV['RW_DATABASE_PATH'] || '.', 'db.yml')
       end
 
-      def self.load_or_reload(database)
-        if database
-          database.reindex
+      def self.load_or_reload(database, database_adapter)
+        if database_adapter
+          database_adapter.reindex
         else
-          database = read(database)
-          database.index_objects
+          database_adapter = read(database)
+          database_adapter.index_objects
         end
-        database
+        database_adapter
       end
 
       def self.read(database)

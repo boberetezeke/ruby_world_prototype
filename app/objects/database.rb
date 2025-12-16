@@ -1,33 +1,50 @@
 class Obj::Database
-  attr_accessor :tag_context, :database_adapter
+  attr_accessor :tag_context, :database_adapter, :database_adapter_class
 
   def self.database_adapter
     Obj::DatabaseAdapter::InMemoryDb
   end
 
   def self.migrate(all_migrations, database)
-    database_adapter.migrate(all_migrations, database)
+    database.database_adapter_class.migrate(all_migrations, database)
   end
 
   def self.rollback(all_migrations, database)
-    database_adapter.rollback(all_migrations, database)
+    database.database_adapter_class.rollback(all_migrations, database)
   end
 
   def self.create_table(table_name, attrs_and_types)
     database_adapter.create_table(table_name, attrs_and_types)
   end
 
-  def self.load_or_reload(database)
-    database_adapter.load_or_reload(database)
+  def self.load_or_reload(database, database_filename: nil)
+    if database
+      database.database_adapter_class.load_or_reload(database.database_adapter)
+    else
+      database = self.new(database_adapter_class: database_adapter_for(database_filename))
+    end
+
+    database
+  end
+
+  def self.database_adapter_for(database_filename)
+    if database_filename =~ /\.sqlite3$/
+      return Obj::DatabaseAdapter::SqliteDb
+    elsif database_filename =~ /\.yml/
+      return Obj::DatabaseAdapter::InMemoryDb
+    else
+      raise "invalid database type based on filename: #{database_filename}"
+    end
   end
 
   def self.read
     database_adapter.read
   end
 
-  def initialize
+  def initialize(database_adapter_class: nil)
     @tag_context = 'tag'
-    @database_adapter = self.class.database_adapter.new(self)
+    @database_adapter_class = database_adapter_class
+    @database_adapter = @database_adapter_class.load_or_reload(self, @database_adapter)
   end
 
   def info
@@ -37,6 +54,15 @@ class Obj::Database
   def register_class(obj_class)
     Obj.register_class(obj_class)
     @database_adapter.register_class(obj_class)
+  end
+
+
+  def serialize
+    @database_adapter.serialize
+  end
+
+  def deserialize(yml)
+    @database_adapter.deserialize(yml)
   end
 
   def create_table(*args)
