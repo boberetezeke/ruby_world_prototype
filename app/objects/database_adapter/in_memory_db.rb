@@ -65,7 +65,7 @@ class Obj
         yml = YAML.unsafe_load_file(db_path)
         database_adapter.deserialize(yml)
         database_adapter.reindex
-        database_adapter = migrate(Migrations.migrations, database_adapter)
+        # database_adapter = migrate(Migrations.migrations, database_adapter)
         database_adapter
       end
 

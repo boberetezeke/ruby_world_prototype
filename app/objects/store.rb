@@ -1,4 +1,4 @@
-class Obj::Store
+class Obj::Store < Obj
   def initialize
   end
 

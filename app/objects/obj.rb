@@ -180,6 +180,14 @@ class Obj
     classes[obj_class.get_type_sym] = obj_class
   end
 
+  def self.add_migrations(migrations)
+    @migrations ||= []
+    @migrations += migrations
+  end
+
+  def self.migrations
+    @migrations ||= []
+  end
 
   def self.indexes
     @indexes

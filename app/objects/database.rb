@@ -19,7 +19,7 @@ class Obj::Database
 
   def self.load_or_reload(database, database_filename: nil)
     if database
-      database.database_adapter_class.load_or_reload(database.database_adapter)
+      database.database_adapter_class.load_or_reload(database, database.database_adapter)
     else
       database = self.new(database_adapter_class: database_adapter_for(database_filename))
     end
@@ -49,6 +49,11 @@ class Obj::Database
 
   def info
     @database_adapter.info
+  end
+
+  def setup(setup_klass, db)
+    self.class.migrate(setup_klass.migrations, db)
+    setup_klass.classes.each {|klass| register_class(klass)}
   end
 
   def register_class(obj_class)
@@ -132,6 +137,6 @@ class Obj::Database
       return nil
     end
 
-    @database_adapter.get_objs(sym)
+    @database_adapter.objs[sym]
   end
 end

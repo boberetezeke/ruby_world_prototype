@@ -8,7 +8,9 @@ load "#{path}/objects/collection.rb"
 
 load "#{path}/objects/database.rb"
 load "#{path}/objects/database_adapter/in_memory_db.rb"
+load "#{path}/objects/database_adapter/in_memory_relationship.rb"
 load "#{path}/objects/database_adapter/sqlite_db.rb"
+load "#{path}/objects/database_adapter/sqlite_relationship.rb"
 load "#{path}/objects/tag.rb"
 
 load "#{path}/objects/call.rb"
@@ -27,3 +29,16 @@ load "#{path}/objects/credit_card.rb"
 
 load "#{path}/objects/bank_of_america_store.rb"
 
+class Obj
+  module Setup
+    def self.classes
+      [
+        Obj::Charge,
+        Obj::Tagging,
+        Obj::Tag,
+        Obj::Vendor,
+        Obj::CreditCard
+      ]
+    end
+  end
+end

@@ -59,13 +59,17 @@ class Obj
 
       def self.migrate(all_migrations, database)
         all_migrations.each do |migration|
+          next if database.database_adapter.db[:schema_migrations].where(name: migration.to_s).count > 0
+
           migration.up(database)
+          database.database_adapter.db.execute("INSERT INTO schema_migrations (name) VALUES ('#{migration}')")
         end
       end
 
       def self.rollback(all_migrations, database)
         all_migrations.each do |migration|
           migration.down(database)
+          database.database_adapter.db.execute("DELETE FROM schema_migrations where name='#{migration}'")
         end
       end
 
@@ -280,6 +284,13 @@ class Obj
       def connect
         # @db = Sequel.connect("sqlite://test-#{rand(100)}.sqlite")
         @db = Sequel.connect("sqlite://#{self.class.db_filename}")
+        create_migration_table
+      end
+
+      def create_migration_table
+        return if @db.table_exists?(:schema_migrations)
+
+        create_table( :schema_migrations, { name: :string })
       end
 
       def disconnect

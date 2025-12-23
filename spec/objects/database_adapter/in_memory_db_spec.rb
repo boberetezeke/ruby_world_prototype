@@ -40,7 +40,7 @@ describe Obj::DatabaseAdapter::InMemoryDb do
   describe '#write' do
     it 'writes the database to disk' do
       subject.write
-      yaml = YAML.load(File.read('db.yml'))
+      yaml = YAML.unsafe_load(File.read('db.yml'))
       expect(yaml[:version]).to eq(described_class.current_version)
     end
   end
