@@ -1,4 +1,6 @@
 class Obj::CreditCard < Obj
+  type_sym :credit_card
+
   has_many :charges, :charge, :credit_card_id, inverse_of: :credit_card
 
   def self.default_display

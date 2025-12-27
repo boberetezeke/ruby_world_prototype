@@ -3,31 +3,75 @@ require 'securerandom'
 
 path = File.dirname(__FILE__)
 
+class Obj
+  module DatabaseAdapter
+  end
+end
+
 load "#{path}/obj/index.rb"
 load "#{path}/obj/has_many_array.rb"
 load "#{path}/obj/relationship.rb"
+load "#{path}/database_adapter/in_memory_relationship.rb"
 
 class Obj
-  attr_reader :id, :type_sym, :attrs
+  attr_reader :id, :type_sym, :attrs, :changes
+  attr_reader :db_obj, :db
 
-  def initialize(type_sym, attrs)
-    reset(type_sym, SecureRandom.hex, attrs)
+  def self.new_blank_obj(type_sym)
+    d = classes[type_sym].allocate
+    d.reset(type_sym, SecureRandom.hex, {})
   end
 
-  def reset(type_sym, id, attrs)
+  def initialize(type_sym, attrs, track_changes: true)
+    reset(type_sym, SecureRandom.hex, attrs, track_changes: track_changes)
+  end
+
+  def db_id
+    @db_obj&.id
+  end
+
+  def added_to_db(db, db_obj: nil, rel_adapter: nil)
+    @db = db
+    @db_obj = db_obj
+    if rel_adapter
+      rel_adapter.in_mem_adapter = Obj::DatabaseAdapter::InMemoryRelationship.new(self)
+      @rel_adapter = rel_adapter
+    else
+      @rel_adapter = Obj::DatabaseAdapter::InMemoryRelationship.new(self)
+    end
+  end
+
+  def reset(type_sym, id, attrs, db_obj: nil, track_changes: true, rel_adapter: Obj::DatabaseAdapter::InMemoryRelationship.new(self))
+    @rel_adapter = rel_adapter
     @type_sym = type_sym
     @id = id
+    @db_obj = db_obj
     @attrs = default_belongs_to_attrs.merge(attrs)
+    @rel_cache = {}
+    @changes = Obj::Changes.new
+    if track_changes
+      @attrs.each do |attr, value|
+        @changes.add(Obj::Change.new(attr, nil, value))
+      end
+    end
 
     self.class.objects[@id] = self
     self.class.classes[type_sym] = self.class
-    update_indexes(self)
+    @rel_adapter.update_indexes(relationships)
     self
+  end
+
+  def rel_cached?(rel)
+    @rel_cache[rel.name]
+  end
+
+  def cache_rel(rel)
+    @rel_cache[rel.name] = true
   end
 
   def dup
     d = self.class.allocate
-    d.reset(@type_sym, SecureRandom.hex, @attrs)
+    d.reset(@type_sym, SecureRandom.hex, @attrs, db_obj: @db_obj)
   end
 
   def default_belongs_to_attrs
@@ -52,14 +96,28 @@ class Obj
   end
 
   def ==(other)
-    other.id == @id
+    if (other.db.nil? && !self.db.nil?) || (!other.db.nil? && self.db.nil?)
+      return false
+    elsif other.db && self.db
+      other.db_id == self.db_id
+    else
+      other.attrs == @attrs
+    end
   end
 
   def hash
     @id
   end
 
-  def self.belongs_to(rel_name, foreign_key, inverse_of: nil, polymorphic: nil)
+  def self.type_sym(sym)
+    @type_sym = sym
+  end
+
+  def self.get_type_sym
+    @type_sym
+  end
+
+  def self.belongs_to(rel_name, foreign_key, inverse_of: nil, polymorphic: nil, poly_classes: [])
     @relationships ||= {}
     relationship = Relationship.new(
       :belongs_to,
@@ -68,6 +126,7 @@ class Obj
       rel_name,
       inverse_of: inverse_of,
       polymorphic: polymorphic,
+      poly_classes: poly_classes,
       classes: classes
     )
     @relationships[rel_name] = relationship
@@ -80,7 +139,9 @@ class Obj
                     polymorphic: false,
                     as: nil,
                     through: nil,
-                    through_next: nil)
+                    through_next: nil,
+                    through_back: nil,
+                    through_type_sym: nil)
     @relationships ||= {}
     relationship =
       Relationship.new(
@@ -93,7 +154,9 @@ class Obj
         polymorphic: polymorphic,
         as: as,
         through: through,
-        through_next: through_next
+        through_next: through_next,
+        through_back: through_back,
+        through_type_sym: through_type_sym
       )
     @relationships[rel_name] = relationship
   end
@@ -113,17 +176,27 @@ class Obj
     @@classes
   end
 
+  def self.register_class(obj_class)
+    classes[obj_class.get_type_sym] = obj_class
+  end
+
+  def self.add_migrations(migrations)
+    @migrations ||= []
+    @migrations += migrations
+  end
+
+  def self.migrations
+    @migrations ||= []
+  end
+
   def self.indexes
     @indexes
   end
 
-  def update_indexes(obj)
-    relationships.each do |_, rel|
-      if rel.rel_type == :belongs_to && rel.inverse_of
-        belongs_to_obj = obj.send(rel.name)
-        rel.inverse(obj).index.add(belongs_to_obj.id, obj) if belongs_to_obj
-      end
-    end
+  def self.new_from_db(type_sym, attrs)
+    obj = @@classes[type_sym].allocate
+    obj.reset(type_sym, SecureRandom.hex, attrs, db_obj: obj.db_obj)
+    obj
   end
 
   def inspect
@@ -134,8 +207,28 @@ class Obj
     self.class.relationships
   end
 
-  def update(obj)
-    @attrs = obj.attrs
+  def classes
+    self.class.classes
+  end
+
+  def belongs_to_relationships
+    relationships.select do |_name, relationship|
+      relationship.rel_type == :belongs_to
+    end
+  end
+
+  def belongs_to_keys
+    belongs_to_relationships.map{ |_,rel| rel.foreign_key }
+  end
+
+  def update(obj, update_belongs_tos: true)
+    attrs = obj.attrs
+    unless update_belongs_tos
+      attrs = obj.attrs.reject{ |k,_| belongs_to_keys.include?(k) || k == :id }
+    end
+
+    @attrs = @attrs.merge(attrs)
+    save
   end
 
   def remove_keys(*keys)
@@ -144,65 +237,52 @@ class Obj
     end
   end
 
-  def belongs_to_assign(rel, rhs)
-    old_val = @attrs[rel.foreign_key]
-    new_val = rhs&.id
-    @attrs[rel.foreign_key] = new_val
-    @attrs[rel.foreign_type] = rhs.type_sym if rel.polymorphic && !rhs.nil?
-    rel.inverse(self).index.update(old_val, new_val, self)
-    @attrs[rel.foreign_type] = nil if rel.polymorphic && rhs.nil?
-  end
-
-  def has_many_assign(rel, rhs)
-    raise 'has_many relationships can only accept array values' unless rhs.is_a?(Array)
-    rel.index[self.id].each do |obj|
-      obj.send("#{rel.rel_name}=", nil)
-    end
-    rhs.each do |obj|
-      obj.send("#{rel.inverse(self).name}=", self)
-    end
+  def simple_assign(sym, rhs)
+    @changes.add(Obj::Change.new(sym, @attrs[sym], rhs))
+    @attrs[sym] = rhs
+    true
   end
 
   def attr_assign(sym, rhs)
     if attrs_and_defaults.keys.include?(sym)
-      return @attrs[sym] = rhs
+      return simple_assign(sym, rhs)
     elsif relationships.include?(sym)
       rel = relationships[sym]
       if rel.rel_type == :belongs_to
-        belongs_to_assign(rel, rhs)
+        @rel_adapter.belongs_to_assign(rel, rhs)
         return true
       elsif rel.rel_type == :has_many
-        has_many_assign(rel, rhs)
+        @rel_adapter.has_many_assign(rel, rhs)
         return true
       end
     end
     return false
   end
 
-  def relationship_read(sym)
+  def relationship_read(sym, rel_adapter: @rel_adapter)
     rel = relationships[sym]
     if rel.rel_type == :belongs_to
-      id = @attrs[rel.foreign_key]
-      ret_value = id.nil? ? nil : self.class.objects[id]
-      return [true, ret_value]
+      return [true, belongs_to_read(rel, rel_adapter: rel_adapter)]
     elsif rel.rel_type == :has_many
       if rel.through
-        complete, has_many_array = relationship_read(rel.through)
-        return [false, nil] unless complete
-        objs = has_many_array.to_a.map do |obj|
-          val_or_vals = obj.send(rel.through_next)
-          if val_or_vals.is_a?(HasManyArray)
-            val_or_vals.to_a
-          else
-            [val_or_vals]
-          end
-        end.flatten
-        return [true, objs]
+        return [true, has_many_through_read(rel, rel_adapter: rel_adapter)]
       else
-        return [true, HasManyArray.new(self, rel, rel.index[self.id])]
+        return [true, has_many_read(rel, rel_adapter: rel_adapter)]
       end
     end
     return [false, nil]
+  end
+
+  def belongs_to_read(rel, use_cache: true, rel_adapter: @rel_adapter)
+    rel_adapter.belongs_to_read(rel, use_cache: use_cache)
+  end
+
+  def has_many_read(rel, use_cache: true, rel_adapter: @rel_adapter)
+    rel_adapter.has_many_read(rel)
+  end
+
+  def has_many_through_read(rel, use_cache: true, rel_adapter: @rel_adapter)
+    rel_adapter.has_many_through_read(rel)
   end
 
   def attr_read(sym)
@@ -213,6 +293,10 @@ class Obj
       return [complete, ret_value] if complete
     end
     return [false, nil]
+  end
+
+  def save
+    @db.update_obj(self)
   end
 
   def method_missing(sym, *args)

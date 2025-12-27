@@ -56,9 +56,9 @@ class Obj::BankOfAmericaStore < Obj::Store
       db_vendor = find_or_add_vendor(charge.vendor) if charge.vendor
       db_credit_card = find_or_add_credit_card(charge.credit_card) if charge.credit_card
 
-      db_charge.update(charge)
       db_charge.vendor = db_vendor
       db_charge.credit_card = db_credit_card
+      db_charge.update(charge, update_belongs_tos: false)
 
       update_description(db_charge, db_vendor)
       tag_charge(db_charge)
@@ -118,7 +118,8 @@ class Obj::BankOfAmericaStore < Obj::Store
 
   def remove_tags(tags, db_charge)
     tags.each do |tag|
-      tagging = @db.find_by(:tagging, {tag_id: tag.id, taggable_type: :charge, taggable_id: db_charge.id})
+      # tagging = @db.find_by(:tagging, {tag_id: tag.id, taggable_type: :charge, taggable_id: db_charge.id})
+      tagging = @db.find_by(:tagging, {tag: tag, taggable_type: :charge, taggable: db_charge})
       @db.rem_obj(tagging)
       tagging.tag = nil
       tagging.taggable = nil
@@ -129,7 +130,7 @@ class Obj::BankOfAmericaStore < Obj::Store
     db_charge = @db.find_by(:charge, { remote_id: charge.remote_id} )
     return db_charge if db_charge
 
-    @db.add_obj(charge.dup)
+    @db.add_obj(charge.dup, save_belongs_tos: false)
   end
 
   def find_or_add_vendor(vendor)

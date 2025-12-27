@@ -1,4 +1,4 @@
 def save
-  @db.write
+  @db.save
   puts "saved"
 end
