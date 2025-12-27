@@ -3,3 +3,5 @@ local_db.rb
 .env
 .byebug_history
 response.html
+*.sqlite
+*.sqlite3
