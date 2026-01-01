@@ -77,14 +77,15 @@ class Obj
         'test.sqlite'
       end
 
-      def self.load_or_reload(database, _database_adapter)
-        new(database)
+      def self.load_or_reload(database, _database_adapter, filename)
+        new(database, filename)
       end
 
       attr_reader :db
 
-      def initialize(database)
+      def initialize(database, filename)
         @database = database
+        @filename = filename
         @type_sym_to_sequel_class = {}
         @sequel_class_to_type_sym = {}
         @class_to_type_sym = {}
@@ -283,7 +284,7 @@ class Obj
 
       def connect
         # @db = Sequel.connect("sqlite://test-#{rand(100)}.sqlite")
-        @db = Sequel.connect("sqlite://#{self.class.db_filename}")
+        @db = Sequel.connect("sqlite://#{@filename}")
         create_migration_table
       end
 
@@ -348,13 +349,14 @@ class Obj
           end
         end.flatten
 
+        class_undef_str = "#{self.class}.send(:remove_const, '#{class_name}') rescue nil;"
         class_def_str =
           "class " + class_name +
-            " < Sequel::Model(:#{type_sym});" +
+            " < Sequel::Model(@db[:#{type_sym}]);" +
             rels.join(";") + ";end"
         # puts "class def: #{class_def_str}"
 
-        [class_def_str, class_name]
+        [class_undef_str + class_def_str, class_name]
       end
 
       def type_sym_to_sequel_class(type_sym)

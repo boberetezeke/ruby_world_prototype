@@ -19,9 +19,10 @@ class Obj::Database
 
   def self.load_or_reload(database, database_filename: nil)
     if database
-      database.database_adapter_class.load_or_reload(database, database.database_adapter)
+      database.database_adapter_class.load_or_reload(database, database.database_adapter, database_filename)
     else
-      database = self.new(database_adapter_class: database_adapter_for(database_filename))
+      database = self.new(database_adapter_class: database_adapter_for(database_filename),
+                          database_filename: database_filename)
     end
 
     database
@@ -41,10 +42,10 @@ class Obj::Database
     database_adapter.read
   end
 
-  def initialize(database_adapter_class: nil)
+  def initialize(database_adapter_class: nil, database_filename: nil)
     @tag_context = 'tag'
     @database_adapter_class = database_adapter_class
-    @database_adapter = @database_adapter_class.load_or_reload(self, @database_adapter)
+    @database_adapter = @database_adapter_class.load_or_reload(self, @database_adapter, database_filename)
   end
 
   def info

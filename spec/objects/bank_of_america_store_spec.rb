@@ -25,21 +25,33 @@ require_relative '../../app/objects/credit_card'
 
 require_relative '../../app/objects/bank_of_america_store'
 require_relative '../support/database_support'
+require 'byebug'
+require 'yaml'
 
 describe Obj::BankOfAmericaStore do
   let(:db_type_class) { Obj::DatabaseAdapter::InMemoryDb }
   db_type_all do
+    # to debug replace db_type_all with context 'db_type_all' and uncomment whichever set below
+    before do
+      # ENV['db_type'] = 'sqlite'
+      # ENV['db_type_filename'] = 'test_db.sqlite3'
+      #
+      # ENV['db_type'] = 'mem'
+      # ENV['db_type_filename'] = 'test_db.yml'
+    end
+
     describe '#sync' do
-      let(:db) { Obj::Database.new(database_adapter_class: db_type_class) }
+      let(:db) { Obj::Database.new(database_adapter_class: db_type_class, database_filename: ENV['db_type_filename']) }
       subject { Obj::BankOfAmericaStore.new(db, 'spec/fixtures')}
 
-      let(:migrations) do [
-        Obj::AddChargeMigration,
-        Obj::AddVendorMigration,
-        Obj::AddCreditCardMigration,
-        Obj::AddTaggingMigration,
-        Obj::AddTagMigration,
-      ]
+      let(:migrations) do
+        [
+          Obj::AddChargeMigration,
+          Obj::AddVendorMigration,
+          Obj::AddCreditCardMigration,
+          Obj::AddTaggingMigration,
+          Obj::AddTagMigration,
+        ]
       end
 
       before do
