@@ -1,5 +1,7 @@
+require 'git_base'
+
 class Obj::Database
-  attr_accessor :tag_context, :database_adapter, :database_adapter_class
+  attr_accessor :tag_context, :database_adapter, :database_adapter_class, :git_base
 
   def self.database_adapter
     Obj::DatabaseAdapter::InMemoryDb
@@ -17,12 +19,14 @@ class Obj::Database
     database_adapter.create_table(table_name, attrs_and_types)
   end
 
-  def self.load_or_reload(database, database_filename: nil)
+  def self.load_or_reload(database, database_filename: nil, git_base_directory: nil, git_bin_directory: nil)
     if database
       database.database_adapter_class.load_or_reload(database, database.database_adapter, database_filename)
     else
       database = self.new(database_adapter_class: database_adapter_for(database_filename),
-                          database_filename: database_filename)
+                          database_filename: database_filename,
+                          git_base_directory: git_base_directory,
+                          git_bin_directory: git_bin_directory)
     end
 
     database
@@ -42,10 +46,11 @@ class Obj::Database
     database_adapter.read
   end
 
-  def initialize(database_adapter_class: nil, database_filename: nil)
+  def initialize(database_adapter_class: nil, database_filename: nil, git_base_directory: nil, git_bin_directory: nil)
     @tag_context = 'tag'
     @database_adapter_class = database_adapter_class
     @database_adapter = @database_adapter_class.load_or_reload(self, @database_adapter, database_filename)
+    @git_base = GitBase::Database.new(git_base_directory, git_bin_directory) if git_base_filename
   end
 
   def info
@@ -61,7 +66,6 @@ class Obj::Database
     Obj.register_class(obj_class)
     @database_adapter.register_class(obj_class)
   end
-
 
   def serialize
     @database_adapter.serialize
@@ -96,15 +100,22 @@ class Obj::Database
   end
 
   def add_obj(obj, save_belongs_tos: true)
+    @git_base.update(git_base_object_guid(obj), obj.attrs)
     @database_adapter.add_obj(obj, save_belongs_tos: save_belongs_tos)
   end
 
   def rem_obj(obj)
     @database_adapter.rem_obj(obj)
+    @git_base.delete(git_base_object_guid(obj)) if @git_base.exists?(git_base_object_guid(obj))
   end
 
   def update_obj(obj)
+    @git_base.update(git_base_object_guid(obj), obj.attrs)
     @database_adapter.update_obj(obj)
+  end
+
+  def git_base_object_guid(obj)
+    GitBase::ObjectGuid.new(obj.class, obj.type_sym, obj.id)
   end
 
   def find_by(type_sym, finder_hash)
