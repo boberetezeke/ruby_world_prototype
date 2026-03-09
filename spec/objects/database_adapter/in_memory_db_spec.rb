@@ -21,7 +21,11 @@ class B < Obj
 end
 
 describe Obj::DatabaseAdapter::InMemoryDb do
-  subject { Obj::Database.new(database_adapter_class: described_class) }
+  subject { Obj::Database.new(database_adapter_class: described_class, database_filename: 'test_db.yml') }
+
+  before do
+    File.delete('test_db.yml') if File.exist?('test_db.yml')
+  end
 
   describe '#serialize' do
     it 'writes the database to disk' do
@@ -94,7 +98,7 @@ describe Obj::DatabaseAdapter::InMemoryDb do
         classes: {},
         migrations_applied: []
       }
-      File.open('db.yml', 'w') {|f| f.write(yml.to_yaml) }
+      File.open('test_db.yml', 'w') {|f| f.write(yml.to_yaml) }
       database = described_class.read(subject)
 
       expect(database.version_read).to eq(described_class.current_version)

@@ -2,6 +2,8 @@ require_relative '../../app/objects/obj'
 require_relative '../../app/objects/tag'
 require_relative '../../app/objects/tagging'
 require_relative '../../app/objects/taggable'
+require_relative '../../app/objects/obj/changes'
+require_relative '../../app/objects/obj/change'
 
 class Obj::Car < Obj
   include Taggable

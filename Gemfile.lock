@@ -1,3 +1,8 @@
+PATH
+  remote: ../git-base
+  specs:
+    git-base (0.1)
+
 GEM
   remote: https://rubygems.org/
   specs:
@@ -101,6 +106,7 @@ DEPENDENCIES
   csv
   dotenv
   env
+  git-base!
   gtk3
   nokogiri
   pry

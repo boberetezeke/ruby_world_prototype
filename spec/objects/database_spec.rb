@@ -169,14 +169,14 @@ end
 
 describe Obj::Database do
   subject {
-    Obj::Database.new(database_adapter_class: database_adapter_class)
+    Obj::Database.new(database_adapter_class: database_adapter_class, database_filename: database_filename)
   }
 
   context 'when using in memory database' do
+    let(:database_filename) {'test_db.yml' }
     let(:database_adapter_class) { Obj::DatabaseAdapter::InMemoryDb }
 
     context 'when loading after save' do
-      let(:database) { described_class.load_or_reload(nil, database_filename: 'test_db.yml') }
       before do
         a = Obj::A.new(1,2)
         b = Obj::B.new(3)
@@ -198,15 +198,15 @@ describe Obj::Database do
       end
 
       it 'has_many / belongs_to relationships reload correctly' do
-        a2 = database.objs[:a].values.first
+        a2 = subject.objs[:a].values.first
 
         expect(a2.bs.to_a.size).to eq(1)
         expect(a2.bs.to_a.first.z).to eq(3)
       end
 
       it 'has_many through relationship' do
-        e2 = database.objs[:e].values.first
-        g2 = database.objs[:g].values.first
+        e2 = subject.objs[:e].values.first
+        g2 = subject.objs[:g].values.first
 
         expect(e2.gs).to eq([g2])
         expect(g2.es).to eq([e2])
@@ -215,7 +215,9 @@ describe Obj::Database do
   end
 
   context 'when using in sqlite database' do
+    let(:database_filename) {'test_db.sqlite3' }
     let(:database_adapter_class) { Obj::DatabaseAdapter::SqliteDb }
+
     before do
       # allow(Obj::Database).to receive(:database_adapter).and_return(Obj::DatabaseAdapter::SqliteDb)
       subject.connect

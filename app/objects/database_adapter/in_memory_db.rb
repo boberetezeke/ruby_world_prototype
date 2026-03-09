@@ -23,9 +23,7 @@ class Obj
         migrations_to_apply.each do |migration|
           klass = migration
           begin
-            puts "migrating: #{klass}"
             klass.up(database)
-            puts "migration done: #{klass}"
           rescue StandardError => e
             puts "Migration: #{klass} failed, all new migrations cancelled"
             puts "ERROR: #{e}"
@@ -43,10 +41,11 @@ class Obj
       end
 
       def self.db_path
-        File.join(ENV['RW_DATABASE_PATH'] || '.', 'db.yml')
+        @db_path
       end
 
-      def self.load_or_reload(database, database_adapter)
+      def self.load_or_reload(database, database_adapter, filename)
+        @db_path = filename
         if database_adapter
           database_adapter.reindex
         else
