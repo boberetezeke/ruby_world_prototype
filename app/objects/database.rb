@@ -21,7 +21,7 @@ class Obj::Database
     if database
       database.database_adapter_class.load_or_reload(database, database.database_adapter)
     else
-      database = self.new(database_adapter_class: database_adapter_for(database_filename))
+      database = self.new(database_adapter_class: database_adapter_for(database_filename), filename: database_filename)
     end
 
     database
@@ -41,10 +41,13 @@ class Obj::Database
     database_adapter.read
   end
 
-  def initialize(database_adapter_class: nil)
+  attr_reader :filename
+
+  def initialize(database_adapter_class: nil, filename: nil)
     @tag_context = 'tag'
     @database_adapter_class = database_adapter_class
     @database_adapter = @database_adapter_class.load_or_reload(self, @database_adapter)
+    @filename = filename
   end
 
   def info

@@ -51,17 +51,20 @@ class Obj::BankOfAmericaStore < Obj::Store
 
   def create_charges(charges, update_charge: false, status_proc: ->(str){})
     charges.each do |charge|
-      db_charge = find_or_add_charge(charge)
+      # debug("processing charge #{charge.remote_id}", on: true)
+      # debug_on_if(charge.remote_id == '24492166172100013826700') do
+        db_charge = find_or_add_charge(charge)
 
-      db_vendor = find_or_add_vendor(charge.vendor) if charge.vendor
-      db_credit_card = find_or_add_credit_card(charge.credit_card) if charge.credit_card
+        db_vendor = find_or_add_vendor(charge.vendor) if charge.vendor
+        db_credit_card = find_or_add_credit_card(charge.credit_card) if charge.credit_card
 
-      db_charge.vendor = db_vendor
-      db_charge.credit_card = db_credit_card
-      db_charge.update(charge, update_belongs_tos: false)
+        db_charge.vendor = db_vendor
+        db_charge.credit_card = db_credit_card
+        db_charge.update(charge, update_belongs_tos: false)
 
-      update_description(db_charge, db_vendor)
-      tag_charge(db_charge)
+        update_description(db_charge, db_vendor)
+        tag_charge(db_charge)
+      # end
     end
   end
 
@@ -99,10 +102,24 @@ class Obj::BankOfAmericaStore < Obj::Store
   def tag_charge(db_charge)
     charge_rules.each do |charge_rule|
       if charge_rule.match?(db_charge)
+        debug "tag_charge: #{db_charge.remote_id}"
+
+        debug "charge_rule.tags = #{charge_rule.tags.map{|t| [t.name, t.id, t.db_id]}}"
+        debug "db_charge.tags = #{db_charge.tags.map{|t| [t.name, t.id, t.db_id]}}"
+
+        if_debug_on do
+          # binding.irb
+        end
+
         tags_to_add = charge_rule.tags - db_charge.tags
         tags_to_remove = db_charge.tags - charge_rule.tags
-        find_or_add_tags(tags_to_add, db_charge)
+
+        debug "tags_to_add: #{tags_to_add}"
+        debug "tags_to_remove: #{tags_to_remove}"
+
         remove_tags(tags_to_remove, db_charge)
+        find_or_add_tags(tags_to_add, db_charge)
+        return
       end
     end
   end
@@ -112,6 +129,9 @@ class Obj::BankOfAmericaStore < Obj::Store
       tagging = Obj::Tagging.new
       tagging.tag = tag
       tagging.taggable = db_charge
+
+      debug "adding tag: #{tag.name} to charge: #{db_charge.remote_id}"
+
       @db.add_obj(tagging)
     end
   end
@@ -120,6 +140,9 @@ class Obj::BankOfAmericaStore < Obj::Store
     tags.each do |tag|
       # tagging = @db.find_by(:tagging, {tag_id: tag.id, taggable_type: :charge, taggable_id: db_charge.id})
       tagging = @db.find_by(:tagging, {tag: tag, taggable_type: :charge, taggable: db_charge})
+
+      debug "removing tagging: #{tagging.tag.name}"
+
       @db.rem_obj(tagging)
       tagging.tag = nil
       tagging.taggable = nil
@@ -130,6 +153,7 @@ class Obj::BankOfAmericaStore < Obj::Store
     db_charge = @db.find_by(:charge, { remote_id: charge.remote_id} )
     return db_charge if db_charge
 
+    debug "creating charge: #{charge}"
     @db.add_obj(charge.dup, save_belongs_tos: false)
   end
 
@@ -137,6 +161,7 @@ class Obj::BankOfAmericaStore < Obj::Store
     db_vendor = @db.find_by(:vendor, { name: vendor.name} )
     return db_vendor if db_vendor
 
+    debug "creating vendor: #{vendor}"
     @db.add_obj(vendor.dup)
   end
 
@@ -144,7 +169,28 @@ class Obj::BankOfAmericaStore < Obj::Store
     db_credit_card = @db.find_by(:credit_card, { last_four_digits: credit_card.last_four_digits} )
     return db_credit_card if db_credit_card
 
+    debug "creating credit card: #{credit_card}"
     @db.add_obj(credit_card.dup)
+  end
+
+  def if_debug_on
+    yield if @debug_on
+  end
+
+  def debug_on_if(condition)
+    if condition
+      @debug_on = true
+      yield
+      @debug_on = false
+    else
+      yield
+    end
+  end
+
+  def debug(str, on: false)
+    if @debug_on || on
+      puts str
+    end
   end
 end
 

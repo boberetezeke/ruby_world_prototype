@@ -7,12 +7,10 @@ load "#{path}/app/objects.rb"
 load "#{path}/app/commands.rb"
 load "#{path}/app/migrations.rb"
 
+@db = Obj::Database.load_or_reload(@db, database_filename: 'data.sqlite3')
+@db.connect()
 
-# f players
+Obj::Database.migrate(Obj::Setup.migrations, @db)
+Obj::Setup.register_classes(@db, Obj::Setup.classes)
 
-# Obj::FantraxStore.new(@db, '/home/stevetuckner/Projects/RubyWorld/ruby_world_prototype').sync
-## Obj::FantraxStore.new(@db, '/Users/stevetuckner/Documents/Fantrax').sync
-
-# f players
-# save
 

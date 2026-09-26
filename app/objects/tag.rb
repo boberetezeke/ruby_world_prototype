@@ -13,4 +13,9 @@ class Obj::Tag < Obj
     return false unless other.is_a?(Tag)
     self.name == other.name
   end
+
+  def eql?(other)
+    return false unless other.is_a?(Tag)
+    self.name == other.name
+  end
 end

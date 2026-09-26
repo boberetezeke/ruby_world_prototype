@@ -5,7 +5,7 @@ gem 'env'
 gem 'csv'
 gem 'rspec'
 gem 'dotenv'
-gem 'nokogiri'
+# gem 'nokogiri'
 gem 'pry'
 gem 'slop'
 gem 'timecop'
@@ -16,9 +16,9 @@ gem 'byebug'
 gem 'valerie'
 # gem 'selenium-webdriver'
 
-if RUBY_PLATFORM == 'x86_64-linux'
-  gem 'kimurai', path: "../kimuraframework"
-end
-if RUBY_PLATFORM =~ /linux/
-  gem 'gtk3'
-end
+# if RUBY_PLATFORM == 'x86_64-linux'
+#   gem 'kimurai', path: "../kimuraframework"
+# end
+# if RUBY_PLATFORM =~ /linux/
+#   gem 'gtk3'
+# end

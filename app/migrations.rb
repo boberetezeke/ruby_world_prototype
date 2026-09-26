@@ -17,5 +17,9 @@ class Obj
         Obj::AddTagMigration,
       ]
     end
+
+    def self.register_classes(db, classes)
+      classes.each {|klass| db.register_class(klass) }
+    end
   end
 end

@@ -239,7 +239,7 @@ class Obj
       end
 
       def rem_obj(obj)
-        obj.db_obj.destroy
+        obj.db_obj&.destroy
       end
 
       def update_obj(obj)
@@ -283,7 +283,7 @@ class Obj
 
       def connect
         # @db = Sequel.connect("sqlite://test-#{rand(100)}.sqlite")
-        @db = Sequel.connect("sqlite://#{self.class.db_filename}")
+        @db = Sequel.connect("sqlite://#{@database.filename}")
         create_migration_table
       end
 
