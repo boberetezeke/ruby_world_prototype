@@ -1,5 +1,6 @@
 def db_type_mem(&)
   let(:db_type_class) {  Obj::DatabaseAdapter::InMemoryDb }
+  let(:db_test_filename) { 'test.yml' }
 
   context 'With db_type mem' do
     before do
@@ -11,6 +12,7 @@ end
 
 def db_type_sqlite(&)
   let(:db_type_class) {  Obj::DatabaseAdapter::SqliteDb }
+  let(:db_test_filename) { 'test.sqlite3' }
 
   context 'With db_type sqlite' do
     before do

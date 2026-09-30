@@ -1,57 +1,23 @@
-require_relative '../../app/objects/obj'
-require_relative '../../app/objects/obj/change'
-require_relative '../../app/objects/obj/changes'
-require_relative '../../app/objects/database'
-require_relative '../../app/objects/database_adapter/in_memory_db'
-require_relative '../../app/objects/database_adapter/sqlite_db'
-require_relative '../../app/objects/database_adapter/sqlite_relationship'
-require_relative '../../app/objects/store'
-
-require_relative '../../app/migrations/add_charge_migration'
-require_relative '../../app/migrations/add_credit_card_migration'
-require_relative '../../app/migrations/add_vendor_migration'
-require_relative '../../app/migrations/add_tag_migration'
-require_relative '../../app/migrations/add_tagging_migration'
-
-require_relative '../../app/objects/tag'
-require_relative '../../app/objects/tagging'
-require_relative '../../app/objects/taggable'
-
-require_relative '../../app/objects/financial/bank_of_america_charge_rules'
-require_relative '../../app/objects/financial/charge_rule'
-require_relative '../../app/objects/charge'
-require_relative '../../app/objects/vendor'
-require_relative '../../app/objects/credit_card'
-
-require_relative '../../app/objects/bank_of_america_store'
+require_relative '../../app/objects'
+require_relative '../../app/migrations'
 require_relative '../support/database_support'
 
+require 'yaml'
+
 describe Obj::BankOfAmericaStore do
-  let(:db_type_class) { Obj::DatabaseAdapter::InMemoryDb }
+  # let(:db_type_class) { Obj::DatabaseAdapter::SqliteDb }
   db_type_all do
     describe '#sync' do
-      let(:db) { Obj::Database.new(database_adapter_class: db_type_class) }
+      # let(:db_test_filename) { 'test.sqlite3' }
+      let(:db) { Obj::Database.new(database_adapter_class: db_type_class, filename: db_test_filename) }
       subject { Obj::BankOfAmericaStore.new(db, 'spec/fixtures')}
-
-      let(:migrations) do [
-        Obj::AddChargeMigration,
-        Obj::AddVendorMigration,
-        Obj::AddCreditCardMigration,
-        Obj::AddTaggingMigration,
-        Obj::AddTagMigration,
-      ]
-      end
 
       before do
         # allow(Obj::Database).to receive(:database_adapter).and_return(Obj::DatabaseAdapter::SqliteDb)
         # allow(Obj::Database).to receive(:database_adapter).and_return(Obj::DatabaseAdapter::InMemoryDb)
         db.connect
-        Obj::Database.migrate(migrations, db)
-        db.register_class(Obj::Charge)
-        db.register_class(Obj::Tagging)
-        db.register_class(Obj::Tag)
-        db.register_class(Obj::Vendor)
-        db.register_class(Obj::CreditCard)
+        Obj::Database.migrate(Obj::Setup.migrations, db)
+        Obj::Setup.register_classes(db, Obj::Setup.classes)
 
         db.add_obj(Obj::Tag.new('steve'))
         db.add_obj(Obj::Tag.new('expenses'))
@@ -61,7 +27,7 @@ describe Obj::BankOfAmericaStore do
       end
 
       after do
-        Obj::Database.rollback(migrations, db)
+        Obj::Database.rollback(Obj::Setup.migrations, db)
       end
 
       it 'builds the charge objects' do
