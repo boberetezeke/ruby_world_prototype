@@ -115,6 +115,8 @@ class Obj
               Integer col_name
             when :datetime
               Time col_name
+            when :date
+              Date col_name
             end
           end
         end
