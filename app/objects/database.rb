@@ -109,6 +109,10 @@ class Obj::Database
     @database_adapter.update_obj(obj)
   end
 
+  def where_by(type_sym, finder_hash)
+    @database_adapter.where_by(type_sym, finder_hash)
+  end
+
   def find_by(type_sym, finder_hash)
     @database_adapter.find_by(type_sym, finder_hash)
   end

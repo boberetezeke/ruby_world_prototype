@@ -154,12 +154,16 @@ class Obj
         @changes.push({change_type: :update_obj, obj: obj})
       end
 
-      def find_by(type_sym, finder_hash)
+      def where_by(type_sym, finder_hash)
         objs_of_type = @objs[type_sym] || {}
         objs_of_type.values.select do |obj|
           value_hash = finder_hash.keys.map{|key| [key, obj.send(key)]}.to_h
           value_hash == finder_hash
-        end.first
+        end
+      end
+
+      def find_by(type_sym, finder_hash)
+        where_by(type_sym, finder_hash).first
       end
 
       def get_objs(sym)

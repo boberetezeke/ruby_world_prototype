@@ -285,7 +285,12 @@ class Obj
 
       def connect
         # @db = Sequel.connect("sqlite://test-#{rand(100)}.sqlite")
-        @db = Sequel.connect("sqlite://#{@database.filename}")
+        if defined?(@@dbb)
+          @db = @@dbb
+          return
+        end
+
+        @@dbb = @db = Sequel.connect("sqlite://#{@database.filename}")
         create_migration_table
       end
 
