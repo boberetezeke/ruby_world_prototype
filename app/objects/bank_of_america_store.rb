@@ -154,7 +154,10 @@ class Obj::BankOfAmericaStore < Obj::Store
     return db_charge if db_charge
 
     debug "creating charge: #{charge}"
-    @db.add_obj(charge.dup, save_belongs_tos: false)
+    charge_dup = charge.dup
+    charge_dup.vendor = nil
+    charge_dup.credit_card = nil
+    @db.add_obj(charge_dup)
   end
 
   def find_or_add_vendor(vendor)
