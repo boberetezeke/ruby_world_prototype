@@ -160,15 +160,24 @@ class Obj
         Relation.new(@db, name)
       end
 
-      def add_obj(obj, save_belongs_tos: true)
+      def add_obj(obj)
         # return if already in database
         return if obj.db_obj
 
         obj.added_to_db(@database,
-                        db_obj: sequel_klass(obj).create(db_attrs(obj, save_belongs_tos: save_belongs_tos)),
+                        db_obj: sequel_klass(obj).create(db_attrs(obj)),
                         rel_adapter: Obj::DatabaseAdapter::SqliteRelationship.new(obj, self))
         obj
       end
+
+      def rem_obj(obj)
+        obj.db_obj&.destroy
+      end
+
+      def update_obj(obj)
+        obj.db_obj.update(db_attrs(obj))
+      end
+
 
       def belongs_to_read(obj, rel)
         if rel.polymorphic
@@ -201,23 +210,23 @@ class Obj
         @type_sym_to_sequel_class[type_sym]
       end
 
-      def db_attrs(obj, save_belongs_tos: true)
+      def db_attrs(obj)
         belongs_to_rels = belongs_to_relationships(obj)
-        belongs_to_keys = belongs_to_rels.map{ |_,rel| rel.foreign_key }
-        belongs_to_types = belongs_to_rels.map{ |_,rel| rel.foreign_type }.compact
-        attrs = obj.attrs.reject do |k,_|
-          belongs_to_keys.include?(k) ||
-          belongs_to_types.include?(k) ||
-          k == :id
-        end
-        attrs.merge(
-          save_belongs_tos ?
-            translated_foreign_key_attrs(obj, belongs_to_rels) :
-            {}
-        )
+        non_relationship_attrs(obj, belongs_to_rels).merge(
+          relationship_attrs(obj, belongs_to_rels))
       end
 
-      def translated_foreign_key_attrs(obj, belongs_to_rels)
+      def non_relationship_attrs(obj, belongs_to_rels)
+        belongs_to_keys = belongs_to_rels.map{ |_,rel| rel.foreign_key }
+        belongs_to_types = belongs_to_rels.map{ |_,rel| rel.foreign_type }.compact
+        obj.attrs.reject do |k,_|
+          belongs_to_keys.include?(k) ||
+            belongs_to_types.include?(k) ||
+            k == :id
+        end
+      end
+
+      def relationship_attrs(obj, belongs_to_rels)
         k_and_vs = []
         belongs_to_rels.each do |name, rel|
           rel_obj = obj.send(name)
@@ -238,23 +247,6 @@ class Obj
         klass.relationships.select do |_name, relationship|
           relationship.rel_type == :belongs_to
         end
-      end
-
-      def rem_obj(obj)
-        obj.db_obj&.destroy
-      end
-
-      def update_obj(obj)
-        belongs_to_relationships(obj).each do |name, rel|
-          rel_obj = obj.belongs_to_read(rel, use_cache: false)
-          if rel_obj
-            rel_val = rel_obj.db_obj
-          else
-            rel_val = nil
-          end
-          obj.db_obj.send("sequel_#{name}=", rel_val)
-        end
-        obj.db_obj.update(db_attrs(obj))
       end
 
       def where_by(type_sym, finder_hash)

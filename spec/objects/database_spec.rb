@@ -306,6 +306,51 @@ describe Obj::Database do
         # puts "at end of 'loads and saves b then a'"
       end
 
+      it 'creates a and b related, then update b and make sure relationship with a is still there' do
+        # puts "at beginning of 'loads and saves b then a'"
+        a = Obj::A.new(1,2)
+        b = Obj::B.new(3)
+
+        b.a = a
+
+        subject.add_obj(b)
+        subject.add_obj(a)
+
+        subject.save
+
+        b2 = subject.find_by(:b, {id: b.db_id})
+        expect(b2.a).to eq(a)
+
+        b2.z = 4
+        b2.save
+
+        b3 = subject.find_by(:b, {id: b.db_id})
+        expect(b3.a).to eq(a)
+      end
+
+      it 'creates a and b related, then updates b with a new a' do
+        # puts "at beginning of 'loads and saves b then a'"
+        a = Obj::A.new(1,2)
+        b = Obj::B.new(3)
+
+        b.a = a
+
+        subject.add_obj(b)
+        subject.add_obj(a)
+
+        subject.save
+
+        b2 = subject.find_by(:b, {id: b.db_id})
+        expect(b2.a).to eq(a)
+
+        a2 = Obj::A.new(4,5)
+        b2.a  = a2
+        b2.save
+
+        b3 = subject.find_by(:b, {id: b.db_id})
+        expect(b3.a).to eq(a2)
+      end
+
       it 'does handle many through' do
         e = Obj::E.new(1)
         f = Obj::F.new(2)

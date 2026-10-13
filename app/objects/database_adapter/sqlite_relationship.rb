@@ -17,6 +17,9 @@ class Obj::DatabaseAdapter::SqliteRelationship
 
   def belongs_to_assign(rel, rhs)
     @in_mem_adapter.belongs_to_assign(rel, rhs)
+    if rhs&.db_obj
+      @obj.cache_rel(rel)
+    end
   end
 
   def has_many_read(rel)

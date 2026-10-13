@@ -97,8 +97,8 @@ class Obj::Database
     @database_adapter.objs
   end
 
-  def add_obj(obj, save_belongs_tos: true)
-    @database_adapter.add_obj(obj, save_belongs_tos: save_belongs_tos)
+  def add_obj(obj)
+    @database_adapter.add_obj(obj)
   end
 
   def rem_obj(obj)
