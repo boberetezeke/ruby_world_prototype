@@ -2,17 +2,20 @@ require 'csv'
 require 'time'
 
 class Obj::BankOfAmericaStore < Obj::Store
-  def initialize(db, directory)
-    super()
+  def initialize(db, directory, status_proc: ->(str){ puts str })
+    super(status_proc: status_proc)
     @db = db
     @directory = directory
+    @no_matches = {}
   end
 
   def sync
     # puts "directory: #{@directory}"
     Dir["#{@directory}/*"].each do|fn|
-      m = /CC_(\w+)(\d+)_(\d+)/.match(fn)
+      m = /\/CC_(\w+)(\d+)_(\d+)/.match(fn)
       next unless m
+
+      @status_proc.call("processing file: #{fn}")
 
       last_four_digits = m[3]
 
@@ -34,6 +37,7 @@ class Obj::BankOfAmericaStore < Obj::Store
       create_tags
       create_charges(charges, status_proc: status_proc)
     end
+    nil
   end
 
   def charge_rules_base
@@ -92,10 +96,19 @@ class Obj::BankOfAmericaStore < Obj::Store
   end
 
   def update_description(charge, vendor)
+    matched = false
     charge_rules.each do |charge_rule|
       if charge_rule.match?(charge)
         charge.description = charge_rule.description || vendor.name
+        matched = true
+        break
+      else
       end
+    end
+
+    if !matched && !@no_matches[charge.remote_id]
+      @no_matches[charge.remote_id] = true
+      @status_proc.call("can't find description for charge: #{charge.posted_date.strftime('%m/%d/%Y')}:#{charge.remote_id}: #{charge.amount} (#{vendor.name})")
     end
   end
 

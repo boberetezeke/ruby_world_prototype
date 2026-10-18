@@ -45,6 +45,15 @@ class Obj
             # Obj.new_from_db(@table_name, attrs)
           end
         end
+
+        def where_by(finder_hash)
+          @database.where_by(@type_sym, finder_hash)
+        end
+
+        def find_by(finder_hash)
+          puts "@type_sym: #{@type_sym}, finder_hash: #{finder_hash}"
+          @database.find_by(@type_sym, finder_hash)
+        end
       end
 
       class Tables
