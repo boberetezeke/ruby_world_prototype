@@ -81,6 +81,14 @@ class Obj::Database
     @database_adapter.drop_table(*args)
   end
 
+  def add_column(*args)
+    @database_adapter.add_column(*args)
+  end
+
+  def remove_column(*args)
+    @database_adapter.remove_column(*args)
+  end
+
   def tag_context
     @tag_context
   end

@@ -28,7 +28,7 @@ class Obj::BankOfAmericaStore < Obj::Store
         vendor_name = row['Payee']
         vendor_address = row['Address']
         amount = row['Amount'].to_f
-        charge = Obj::Charge.new(remote_id, amount, date)
+        charge = Obj::Charge.new(remote_id, amount, date, File.basename(fn))
         charge.vendor = Obj::Vendor.new(vendor_name, vendor_address)
         charge.credit_card = Obj::CreditCard.new(last_four_digits)
         charge

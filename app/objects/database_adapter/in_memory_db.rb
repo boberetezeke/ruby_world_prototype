@@ -186,6 +186,12 @@ class Obj
       def drop_table(*args)
       end
 
+      def add_column(*args)
+      end
+
+      def remove_column(*args)
+      end
+
       def unlink
       end
 

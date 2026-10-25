@@ -10,7 +10,7 @@ describe Obj::BankOfAmericaStore do
     describe '#sync' do
       # let(:db_test_filename) { 'test.sqlite3' }
       let(:db) { Obj::Database.new(database_adapter_class: db_type_class, filename: db_test_filename) }
-      subject { Obj::BankOfAmericaStore.new(db, 'spec/fixtures')}
+      subject { Obj::BankOfAmericaStore.new(db, 'spec/fixtures', status_proc: ->(msg) { }) }
 
       before do
         # allow(Obj::Database).to receive(:database_adapter).and_return(Obj::DatabaseAdapter::SqliteDb)
@@ -19,7 +19,14 @@ describe Obj::BankOfAmericaStore do
         Obj::Database.migrate(Obj::Setup.migrations, db)
         Obj::Setup.register_classes(db, Obj::Setup.classes)
 
-        db.add_obj(Obj::Tag.new('steve'))
+        allow(subject).to receive(:charge_rules_base).and_return(
+          [
+            [['bob', 'expenses'],         /kindle/i]
+          ]
+        )
+
+
+        db.add_obj(Obj::Tag.new('bob'))
         db.add_obj(Obj::Tag.new('expenses'))
         db.add_obj(Obj::Tag.new('entertainment'))
 
@@ -47,17 +54,18 @@ describe Obj::BankOfAmericaStore do
         air_bnb_charge_1 = db.objs[:charge].values.find{|bp| bp.remote_id == '24492153192717417862520'}
         air_bnb_vendor = air_bnb_charge_1.vendor
         expect(air_bnb_charge_1.amount).to eq(-386.65)
+        expect(air_bnb_charge_1.import_filename).to eq('CC_July2023_4765.csv')
         expect(air_bnb_vendor.charges.size).to eq(2)
       end
 
       it 'tags the charges appropriately' do
         kindle_charge = db.objs[:charge].values.find{|bp| bp.remote_id == '24692163192100636893179'}
         x = kindle_charge.tags
-        expect(kindle_charge.tags.map(&:name)).to match_array(['steve', 'expenses'])
+        expect(kindle_charge.tags.map(&:name)).to match_array(['bob', 'expenses'])
 
-        steve = db.objs[:tag].values.find{|tag| tag.name == 'steve'}
+        bob = db.objs[:tag].values.find{|tag| tag.name == 'bob'}
         expenses = db.objs[:tag].values.find{|tag| tag.name == 'expenses'}
-        expect(steve.objs).to eq([kindle_charge])
+        expect(bob.objs).to eq([kindle_charge])
         expect(expenses.objs).to eq([kindle_charge])
       end
 
