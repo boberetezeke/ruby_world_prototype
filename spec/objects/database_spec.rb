@@ -89,7 +89,7 @@ end
 
 class CreateA
   def self.up(database)
-    database.create_table(:a, {x: :string, y: :string})
+    database.create_table(:a, {x: :string})
   end
 
   def self.down(database)
@@ -167,6 +167,17 @@ class CreateG
   end
 end
 
+
+class CreateA2
+  def self.up(database)
+    database.add_column(:a, :y, :string)
+  end
+
+  def self.down(database)
+    database.remove_column(:a, :y)
+  end
+end
+
 describe Obj::Database do
   subject {
     Obj::Database.new(database_adapter_class: database_adapter_class)
@@ -220,13 +231,13 @@ describe Obj::Database do
       # allow(Obj::Database).to receive(:database_adapter).and_return(Obj::DatabaseAdapter::SqliteDb)
       subject.connect
       Obj::Database.migrate([
-          CreateA, CreateB, CreateC, CreateD1, CreateD2, CreateE, CreateF, CreateG
+          CreateA, CreateB, CreateC, CreateD1, CreateD2, CreateE, CreateF, CreateG, CreateA2
         ], subject)
     end
 
     after do
       Obj::Database.rollback([
-        CreateA, CreateB, CreateC, CreateD1, CreateD2, CreateE, CreateF, CreateG
+        CreateA, CreateB, CreateC, CreateD1, CreateD2, CreateE, CreateF, CreateG, CreateA2
       ], subject)
     end
 

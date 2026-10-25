@@ -17,6 +17,7 @@ class Obj::Charge < Obj
         amount: { width: 15, type: :float, title: 'amount', format: '%.2f' },
         posted_date: { width: 15, type: :date, title: 'date' },
         description: { width: 40, type: :string, title: 'description' },
+        import_filename: { width: 40, type: :string, title: 'import filename' },
         tags: { width: 25, type: :tags, title: 'tags' },
       }
     }
@@ -26,12 +27,13 @@ class Obj::Charge < Obj
     Charge.new(nil, charges.map(&:amount).sum, nil)
   end
 
-  def initialize(remote_id, amount, posted_date, description: nil)
+  def initialize(remote_id, amount, posted_date, import_filename, description: nil)
     super(:charge, {
       posted_date: posted_date,
       remote_id: remote_id,
       amount: amount,
-      description: description
+      description: description,
+      import_filename: import_filename
     })
   end
 end

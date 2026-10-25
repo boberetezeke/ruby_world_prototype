@@ -76,7 +76,7 @@ class Obj
       end
 
       def self.rollback(all_migrations, database)
-        all_migrations.each do |migration|
+        all_migrations.reverse.each do |migration|
           migration.down(database)
           database.database_adapter.db.execute("DELETE FROM schema_migrations where name='#{migration}'")
         end
@@ -112,27 +112,45 @@ class Obj
       end
 
       def create_table(table_name, columns)
+        db_context = self
         @db.create_table table_name do
           primary_key :id
           columns.each do |col_name, col_type|
-            case col_type
-            when :string
-              String col_name
-            when :float
-              Float col_name
-            when :integer
-              Integer col_name
-            when :datetime
-              Time col_name
-            when :date
-              Date col_name
-            end
+            instance_eval("#{db_context.translate_column_type(col_type)} col_name")
           end
         end
       end
 
       def drop_table(table_name)
         @db.drop_table(table_name)
+      end
+
+      def translate_column_type(col_type)
+        case col_type
+        when :string
+          'String'
+        when :float
+          'Float'
+        when :integer
+          'Integer'
+        when :datetime
+          'Time'
+        when :date
+          'Date'
+        end
+      end
+
+      def add_column(table, column_name, column_type)
+        db_context = self
+        @db.alter_table table do
+          add_column(column_name, db_context.translate_column_type(column_type))
+        end
+      end
+
+      def remove_column(table, column_name)
+        @db.alter_table table do
+          drop_column(column_name)
+        end
       end
 
       def all(relation)

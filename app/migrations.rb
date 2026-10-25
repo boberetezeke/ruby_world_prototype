@@ -5,6 +5,7 @@ load "#{path}/migrations/add_credit_card_migration.rb"
 load "#{path}/migrations/add_tag_migration.rb"
 load "#{path}/migrations/add_tagging_migration.rb"
 load "#{path}/migrations/add_vendor_migration.rb"
+load "#{path}/migrations/add_charge_import_file_migration.rb"
 
 class Obj
   module Setup
@@ -15,6 +16,7 @@ class Obj
         Obj::AddCreditCardMigration,
         Obj::AddTaggingMigration,
         Obj::AddTagMigration,
+        Obj::AddChargeImportFileMigration
       ]
     end
 
