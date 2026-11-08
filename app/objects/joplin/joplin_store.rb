@@ -197,12 +197,13 @@ class Obj::JoplinStore < Obj::Store
   private
 
   def new_note_from_joplin_data(note_data)
-    Obj::JoplinNote.new(
+    jn = Obj::JoplinNote.new(
       note_data["title"],
       note_data["body"],
       joplin_remote_id: note_data["id"],
       joplin_folder_id: note_data["parent_id"]
     )
+    jn
   end
 
   def connection

@@ -114,6 +114,10 @@ describe Obj::JoplinStore do
           joplin_note_2.joplin_folder = Obj::JoplinFolder.new('Old Folder 2', joplin_remote_id: 'folder-2')
           db.add_obj(joplin_note_2)
 
+          expect(connection).to receive(:put).with("/notes/note-2?token=#{subject.token}").and_return(
+            double('response', status: 200, body: { id: 'note-2' }.to_json)
+          )
+
           subject.sync
         end
 
@@ -227,7 +231,10 @@ describe Obj::JoplinStore do
 
             expect(connection).to have_received(:put).with(
               "/notes/note-1?token=#{subject.token}"
-            ).twice
+            ).once
+            expect(connection).to have_received(:put).with(
+              "/notes/note-2?token=#{subject.token}"
+            ).once
             expect(put_bodies).to contain_exactly(
                                      { title: 'Note 1', body: 'This is the body of Note 1', parent_id: 'folder-1' },
                                      { title: 'Note 2', body: 'This is the body of Note 2', parent_id: 'folder-1' }

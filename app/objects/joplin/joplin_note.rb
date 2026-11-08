@@ -26,7 +26,7 @@ class Obj::JoplinNote < Obj
       joplin_remote_id: joplin_remote_id,
       joplin_folder_id: joplin_folder_id,
       note_id: note_id,
-      publish_only: true
+      publish_only: false
     })
   end
 end
