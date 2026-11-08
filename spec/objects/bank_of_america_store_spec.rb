@@ -38,7 +38,7 @@ describe Obj::BankOfAmericaStore do
       end
 
       it 'builds the charge objects' do
-        expect(db.objs[:charge].size).to eq(4)
+        expect(db.objs[:charge].size).to eq(5)
       end
 
       it 'builds the vendor objects' do
@@ -59,14 +59,14 @@ describe Obj::BankOfAmericaStore do
       end
 
       it 'tags the charges appropriately' do
-        kindle_charge = db.objs[:charge].values.find{|bp| bp.remote_id == '24692163192100636893179'}
-        x = kindle_charge.tags
-        expect(kindle_charge.tags.map(&:name)).to match_array(['bob', 'expenses'])
+        kindle_charge_1 = db.objs[:charge].values.find{|bp| bp.remote_id == '24692163192100636893179'}
+        kindle_charge_2 = db.objs[:charge].values.find{|bp| bp.remote_id == '34692163192100636893179'}
+        expect(kindle_charge_1.tags.map(&:name)).to match_array(['bob', 'expenses'])
 
         bob = db.objs[:tag].values.find{|tag| tag.name == 'bob'}
         expenses = db.objs[:tag].values.find{|tag| tag.name == 'expenses'}
-        expect(bob.objs).to eq([kindle_charge])
-        expect(expenses.objs).to eq([kindle_charge])
+        expect(bob.objs).to match_array([kindle_charge_1, kindle_charge_2])
+        expect(expenses.objs).to match_array([kindle_charge_1, kindle_charge_2])
       end
 
       it 'changes tags if already tagged' do

@@ -116,7 +116,7 @@ class Obj
         @db.create_table table_name do
           primary_key :id
           columns.each do |col_name, col_type|
-            instance_eval("#{db_context.translate_column_type(col_type)} col_name")
+            instance_eval("#{db_context.translate_column_type(col_type)} col_name#{db_context.translate_column_suffix_for_create_table(col_type)}")
           end
         end
       end
@@ -127,7 +127,11 @@ class Obj
 
       def translate_column_type(col_type)
         case col_type
+        when :boolean
+          TrueClass
         when :string
+          'String'
+        when :text
           'String'
         when :float
           'Float'
@@ -140,10 +144,26 @@ class Obj
         end
       end
 
+      def translate_column_suffix_for_create_table(col_type)
+        if col_type == :text
+          ', text: true'
+        else
+          ''
+        end
+      end
+
+      def translate_column_suffix_for_add_column(col_type)
+        if col_type == :text
+          { text: true }
+        else
+          {}
+        end
+      end
+
       def add_column(table, column_name, column_type)
         db_context = self
         @db.alter_table table do
-          add_column(column_name, db_context.translate_column_type(column_type))
+          add_column(column_name, db_context.translate_column_type(column_type), db_context.translate_column_suffix_for_add_column(column_type))
         end
       end
 

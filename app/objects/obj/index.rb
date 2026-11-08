@@ -36,3 +36,33 @@ class Index
     @index[index] || []
   end
 end
+
+class HasOneIndex
+  def initialize
+    @value = nil
+  end
+
+  def reset
+    @value = nil
+  end
+
+  def values
+    [@value]
+  end
+
+  def add(k, v)
+    @value = v
+  end
+
+  def remove(k, v)
+    @value = nil
+  end
+
+  def update(old_k, new_k, v)
+    @value = v
+  end
+
+  def [](index)
+    @value || []
+  end
+end

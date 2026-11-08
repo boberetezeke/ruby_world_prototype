@@ -1,4 +1,4 @@
-def tags_by_months(months, year: Time.now.year, tags_to_include: ['total'])
+def tags_by_months(months, year: Time.now.year, tags_to_include: [])
   month_tags = months.map do |month|
     {
       month: month,
@@ -64,11 +64,11 @@ def charges_for_statement(statement_name)
   @db.charges.where_by(import_filename: statement_name)
 end
 
-
 def largest_charges(charges, sum)
   num_charges = sum < 10 ? 1 : (sum < 100 ? 2 : (sum < 300 ? 3 : sum < 1000 ? 4 : 5))
   charges.sort_by{|c| -c.amount}.last(num_charges).reverse.map do |charge|
     {
+      posted_date: charge.posted_date,
       amount: -charge.amount,
       description: charge.description ? charge.description : charge.vendor.name }
   end

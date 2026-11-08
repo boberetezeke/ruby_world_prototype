@@ -20,6 +20,7 @@ class Relationship
     @inverse_type = as ? "#{as}_type".to_sym : nil
     @classes = classes
     @index = Index.new if @rel_type == :has_many
+    @index = HasOneIndex.new if @rel_type == :has_one
     @through = through
     @through_next = through_next
     @through_back = through_back

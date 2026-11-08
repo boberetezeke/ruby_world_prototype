@@ -12,6 +12,7 @@ load "#{path}/objects/database_adapter/in_memory_relationship.rb"
 load "#{path}/objects/database_adapter/sqlite_db.rb"
 load "#{path}/objects/database_adapter/sqlite_relationship.rb"
 load "#{path}/objects/tag.rb"
+load "#{path}/objects/query.rb"
 
 load "#{path}/objects/call.rb"
 load "#{path}/objects/contact.rb"
@@ -27,6 +28,9 @@ load "#{path}/objects/vendor.rb"
 load "#{path}/objects/credit_card.rb"
 
 load "#{path}/objects/bank_of_america_store.rb"
+load "#{path}/objects/joplin/joplin_store.rb"
+load "#{path}/objects/joplin/joplin_folder.rb"
+load "#{path}/objects/joplin/joplin_note.rb"
 
 class Obj
   module Setup
@@ -36,7 +40,10 @@ class Obj
         Obj::Tagging,
         Obj::Tag,
         Obj::Vendor,
-        Obj::CreditCard
+        Obj::CreditCard,
+        Obj::Note,
+        Obj::JoplinFolder,
+        Obj::JoplinNote
       ]
     end
   end

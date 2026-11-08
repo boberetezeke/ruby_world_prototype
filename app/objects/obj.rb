@@ -161,6 +161,33 @@ class Obj
     @relationships[rel_name] = relationship
   end
 
+  def self.has_one(rel_name, target_type_sym, foreign_key,
+                    inverse_of: nil,
+                    polymorphic: false,
+                    as: nil,
+                    through: nil,
+                    through_next: nil,
+                    through_back: nil,
+                    through_type_sym: nil)
+    @relationships ||= {}
+    relationship =
+      Relationship.new(
+        :has_one,
+        rel_name,
+        foreign_key,
+        target_type_sym,
+        classes: classes,
+        inverse_of: inverse_of,
+        polymorphic: polymorphic,
+        as: as,
+        through: through,
+        through_next: through_next,
+        through_back: through_back,
+        through_type_sym: through_type_sym
+      )
+    @relationships[rel_name] = relationship
+  end
+
   def self.relationships
     @relationships ||= {}
     @relationships
