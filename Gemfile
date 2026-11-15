@@ -3,6 +3,7 @@ ruby '3.4.5'
 
 gem 'env'
 gem 'csv'
+gem 'faraday'
 gem 'rspec'
 gem 'dotenv'
 # gem 'nokogiri'

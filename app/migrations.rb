@@ -6,6 +6,8 @@ load "#{path}/migrations/add_tag_migration.rb"
 load "#{path}/migrations/add_tagging_migration.rb"
 load "#{path}/migrations/add_vendor_migration.rb"
 load "#{path}/migrations/add_charge_import_file_migration.rb"
+load "#{path}/migrations/add_note_migration.rb"
+load "#{path}/migrations/add_joplin_objects_migration.rb"
 
 class Obj
   module Setup
@@ -16,7 +18,9 @@ class Obj
         Obj::AddCreditCardMigration,
         Obj::AddTaggingMigration,
         Obj::AddTagMigration,
-        Obj::AddChargeImportFileMigration
+        Obj::AddChargeImportFileMigration,
+        Obj::AddNoteMigration,
+        Obj::AddJoplinObjectsMigration
       ]
     end
 

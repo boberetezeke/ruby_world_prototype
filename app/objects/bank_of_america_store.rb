@@ -12,12 +12,12 @@ class Obj::BankOfAmericaStore < Obj::Store
   def sync
     # puts "directory: #{@directory}"
     Dir["#{@directory}/*"].each do|fn|
-      m = /\/CC_(\w+)(\d+)_(\d+)/.match(fn)
+      m = /\/CC_(((\w+)(\d+))|(currentTransaction))_(\d+)/.match(fn)
       next unless m
 
       @status_proc.call("processing file: #{fn}")
 
-      last_four_digits = m[3]
+      last_four_digits = m[6]
 
       lines = CSV.readlines(fn, headers: true)
       charges = lines.map do |row|

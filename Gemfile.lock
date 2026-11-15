@@ -10,8 +10,21 @@ GEM
     dotenv (3.1.8)
     env (0.3.0)
     erb (6.0.0)
+    faraday (2.15.1)
+      faraday-net_http (>= 2.0, < 3.6)
+      json
+      logger
+    faraday-net_http (3.5.0)
+      net-http (~> 0.5)
+    json (3.1.0)
+    logger (1.7.0)
     method_source (1.1.0)
     mini_portile2 (2.8.9)
+    net-http (0.10.0)
+      net-protocol (>= 0.3.0)
+      uri (>= 0.11.1)
+    net-protocol (0.4.0)
+      timeout
     pry (0.15.2)
       coderay (~> 1.1)
       method_source (~> 1.0)
@@ -42,7 +55,9 @@ GEM
       mini_portile2 (~> 2.8.0)
     stringio (3.1.9)
     timecop (0.9.10)
+    timeout (0.6.1)
     tsort (0.2.0)
+    uri (1.1.2)
     valerie (1.0.0)
 
 PLATFORMS
@@ -54,6 +69,7 @@ DEPENDENCIES
   csv
   dotenv
   env
+  faraday
   pry
   rdoc
   rspec
