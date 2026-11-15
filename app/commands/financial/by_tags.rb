@@ -65,7 +65,7 @@ def charges_for_statement(statement_name)
 end
 
 def largest_charges(charges, sum)
-  num_charges = sum < 10 ? 1 : (sum < 100 ? 2 : (sum < 300 ? 3 : sum < 1000 ? 4 : 5))
+  num_charges = sum < 10 ? 2 : (sum < 100 ? 3 : (sum < 300 ? 4 : sum < 1000 ? 5 : 6))
   charges.sort_by{|c| -c.amount}.last(num_charges).reverse.map do |charge|
     {
       posted_date: charge.posted_date,

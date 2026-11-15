@@ -19,6 +19,13 @@ class Obj::JoplinNote < Obj
     }
   end
 
+  def self.defaults
+    {
+      publish_only: false
+    }
+  end
+
+
   def initialize(title, body, joplin_remote_id: nil, joplin_folder_id: nil, note_id: nil)
     super(:joplin_note, {
       title: title,
