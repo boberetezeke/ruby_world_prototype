@@ -43,10 +43,11 @@ class Obj::Database
 
   attr_reader :filename
 
-  def initialize(database_adapter_class: nil, filename: nil)
+  def initialize(database_adapter_class: nil, filename: nil, git_path: nil)
     @tag_context = 'tag'
     @database_adapter_class = database_adapter_class
     @database_adapter = @database_adapter_class.load_or_reload(self, @database_adapter)
+    @git_base = GitBase::Database.new(git_path, 'bin')
     @filename = filename
   end
 

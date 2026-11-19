@@ -15,6 +15,9 @@ gem 'sequel'
 gem 'rdoc'
 gem 'byebug'
 gem 'valerie'
+
+gem 'git-base', path: '../git-base'
+
 # gem 'selenium-webdriver'
 
 # if RUBY_PLATFORM == 'x86_64-linux'

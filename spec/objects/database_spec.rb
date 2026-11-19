@@ -179,11 +179,11 @@ class CreateA2
 end
 
 describe Obj::Database do
-  subject {
-    Obj::Database.new(database_adapter_class: database_adapter_class)
-  }
-
   context 'when using in memory database' do
+    subject {
+      Obj::Database.new(database_adapter_class: database_adapter_class)
+    }
+
     let(:database_adapter_class) { Obj::DatabaseAdapter::InMemoryDb }
 
     context 'when loading after save' do
@@ -226,6 +226,10 @@ describe Obj::Database do
   end
 
   context 'when using in sqlite database' do
+    subject {
+      Obj::Database.new(database_adapter_class: database_adapter_class, filename: 'test.sqlite3', git_path: 'test_git')
+    }
+
     let(:database_adapter_class) { Obj::DatabaseAdapter::SqliteDb }
     before do
       # allow(Obj::Database).to receive(:database_adapter).and_return(Obj::DatabaseAdapter::SqliteDb)
